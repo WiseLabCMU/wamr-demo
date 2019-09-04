@@ -1,0 +1,6 @@
+[submodule "external/mongoose"]
+	path = external/mongoose
+	url = git@github.com:cesanta/mongoose.git
+[submodule "external/cJSON"]
+	path = external/cJSON
+	url = git@github.com:DaveGamble/cJSON.git
