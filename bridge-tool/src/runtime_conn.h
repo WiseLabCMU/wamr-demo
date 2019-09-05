@@ -13,13 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <stdint.h>
+#include "shared_utils.h"
+#include "attr_container.h"
+#include "mongoose.h"
 
-#ifndef DEPS_APP_MGR_HOST_TOOL_SRC_TRANSPORT_H_
-#define DEPS_APP_MGR_HOST_TOOL_SRC_TRANSPORT_H_
+#ifndef RUNTIME_CONN_H_
+#define RUNTIME_CONN_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define BUF_SIZE 1024
+#define TIMEOUT_EXIT_CODE -2
+#define URL_MAX_LEN 256
+#define DEFAULT_TIMEOUT_MS 5000
+#define DEFAULT_ALIVE_TIME_MS 0
+
+#define CONNECTION_MODE_TCP 1
+#define CONNECTION_MODE_UART 2
+
+#define RESPONSE_OUTPUT_CONSOLE 0
+#define RESPONSE_OUTPUT_HTTP 1
+
+typedef enum REPLY_PACKET_TYPE {
+    REPLY_TYPE_EVENT = 0, REPLY_TYPE_RESPONSE = 1
+} REPLY_PACKET_TYPE;
 
 /* IMRT link message between host and WAMR */
 typedef struct {
@@ -49,7 +69,7 @@ typedef struct {
  *
  * @return true if success, false if fail
  */
-bool host_tool_send_data(int fd, const char *buf, unsigned int len);
+bool host_tool_send_data(const char *buf, unsigned int len);
 
 /**
  * @brief Handle one byte of IMRT link message
@@ -114,6 +134,56 @@ int parse_baudrate(int baud);
  * @return true if success, false if fail
  */
 bool udp_send(const char *address, int port, const char *buf, int len);
+
+/**
+ * @brief Init connetion to runtime
+ *
+ */
+int runtime_conn_init();
+
+/**
+ * @brief Close connetion to runtime
+ *
+ */
+void runtime_conn_close();
+
+/**
+ * @brief Process data received from runtime
+ *
+ */
+int process_rcvd_data(const char *buf, int len, imrt_link_recv_context_t *ctx);
+
+/**
+ * @brief Parse data received from runtime
+ *
+ */
+response_t *parse_response_from_imrtlink(imrt_link_message_t *message, response_t *response);
+
+/**
+ * @brief Parse event data received from runtime
+ *
+ */
+request_t *parse_event_from_imrtlink(imrt_link_message_t *message, request_t *request);
+
+/**
+ * @brief Output a response received from the runtime
+ *
+ */
+void output_response(response_t *obj);
+
+/**
+ * @brief Output a payload received from the runtime
+ *
+ */
+void output(const char *header, attr_container_t *payload, int foramt,int payload_len);
+
+/**
+ * Reads response from runtime. If connection to rest client is given, forwards the response to it
+ * 
+ * @param http_mg_conn the connection to rest client; if !=NULL outputs to the connection; if =NULL outputs to console
+ * @return returns -1 on error, -2 on timeout; >=0 status code
+ */
+int get_request_response(struct mg_connection *http_mg_conn);
 
 #ifdef __cplusplus
 } /* end of extern "C" */

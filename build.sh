@@ -27,8 +27,8 @@ fi
 
 echo "#####################build runtime project"
 cd ${CURR_DIR}/runtime
-mkdir -p bin
-cd bin
+mkdir -p out
+cd out
 cmake ..
 make
 if [ $? != 0 ];then
@@ -40,8 +40,8 @@ echo "#####################build runtime project success"
 
 echo "#####################build bridge"
 cd ${CURR_DIR}/bridge-tool
-mkdir -p bin
-cd bin
+mkdir -p out
+cd out
 cmake ..
 make
 if [ $? != 0 ];then

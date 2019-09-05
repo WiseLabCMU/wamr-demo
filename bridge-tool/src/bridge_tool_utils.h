@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _HOST_TOOL_UTILS_H_
-#define _HOST_TOOL_UTILS_H_
+#ifndef _BRIDGE_TOOL_UTILS_H_
+#define _BRIDGE_TOOL_UTILS_H_
 
 #ifdef __cplusplus
 extern "C" {

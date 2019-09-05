@@ -64,10 +64,10 @@ include_directories(
     ${MG_DIR}
 )
 
-file (GLOB_RECURSE HOST_TOOL_SRC src/*.c)
+file (GLOB_RECURSE BRIDGE_TOOL_SRC src/*.c)
 
 SET(SOURCES
-    ${HOST_TOOL_SRC}
+    ${BRIDGE_TOOL_SRC}
     ${PLATFORM_SHARED_SOURCE}
     ${UTILS_SHARED_SOURCE}
     ${MEM_ALLOC_DIR}/bh_memory.c
