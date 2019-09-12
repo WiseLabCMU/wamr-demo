@@ -460,7 +460,7 @@ int get_request_response(struct mg_connection *http_mg_conn)
                     }
                     
                     if (http_mg_conn != NULL)
-                        http_output_response(http_mg_conn, response);
+                        http_output_runtime_response(http_mg_conn, response);
                     else output_response(response);
                     return response->status;
                 } else {

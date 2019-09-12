@@ -1,3 +1,13 @@
+ /** @file bridge-tool.c
+ *  @brief Implementation of a pubsub and http bridge 
+ * 
+ *  Bridges between a WAMR runtime and MQTT pubsub. Also bridges requests from an http rest interface for management of modules.
+ *  This code is based on WAMR host tool; original copyright bellow.
+ *
+ *  @author Nuno Pereira
+ *  @date July, 2019
+ */
+
 /*
  * Copyright (C) 2019 Intel Corporation.  All rights reserved.
  *
@@ -24,39 +34,56 @@
 #include "runtime_conn.h"
 #include "runtime_request.h"
 #include "http.h"
+#include "mqtt.h"
+
+#define RECONNECT_ATTEMPTS 3
+
+static uint32_t g_mqtt_keepalive_ms=80000;
 
 int main(int argc, char *argv[])
 {
     int ret;
     imrt_link_recv_context_t recv_ctx = { 0 };
     char buffer[BUF_SIZE] = { 0 };
-    uint32_t last_check, total_elpased_ms = 0;
-    //bool is_responsed = true;
     fd_set readfds;
     int result = 0;
     struct timeval tv;
     int runtime_conn_fd;
     struct mg_connection *http_mg_conn=NULL;
+    struct mg_connection *mqtt_mg_conn=NULL;
+    int n, reply_type = -1, rconn=0;
+    uint32_t last_check, total_elapsed_ms = 0;
+  
+    bh_get_elpased_ms(&last_check);
 
-    //TODO: reconnect 3 times
     if (runtime_conn_init(&runtime_conn_fd) != 0)
         return -1;
 
-    if (http_init(http_mg_conn) != 0 )
+    if (http_init(&http_mg_conn) != 0 )
         return -1;
 
-    bh_get_elpased_ms(&last_check);
-
+    if (mqtt_init(&mqtt_mg_conn) != 0 )
+        return -1;
+    
     while (1) {
-        //struct timeval tv;
+        total_elapsed_ms += bh_get_elpased_ms(&last_check);
 
-        total_elpased_ms += bh_get_elpased_ms(&last_check);
+        if (total_elapsed_ms >= g_mqtt_keepalive_ms) {
+            mg_mqtt_ping(mqtt_mg_conn);
+            mqtt_pool_requests(); // process mqtt requests
+            total_elapsed_ms = 0;
+        }
 
+        if (rconn > RECONNECT_ATTEMPTS) {
+            printf("Error: too many reconnection attempts.\n");
+            exit(-1);
+        }
         if (runtime_conn_fd == -1) {
+            rconn++;
             if (runtime_conn_init() != 0) {
                 sleep(1);
                 continue;
-            }
+            } else rconn = 0;
         }
 
         tv.tv_sec = 1;
@@ -66,23 +93,22 @@ int main(int argc, char *argv[])
         FD_ZERO (&readfds);
         FD_SET (runtime_conn_fd, &readfds);
         FD_SET (http_mg_conn->sock, &readfds);
+        FD_SET (mqtt_mg_conn->sock, &readfds);
 
         result = select(FD_SETSIZE, &readfds, NULL, NULL, &tv);
 
         if (result < 0) {
             if (errno != EINTR) {
                 printf("Error in select, errno: 0x%x\n", errno);
-                ret = -1;
-                goto ret;
+                continue;
             }
         } else if (result == 0) { /* select timeout */
         } else if (result > 0) {
             if (FD_ISSET(http_mg_conn->sock, &readfds)) {
-                http_pool_requests();
-            }
-            if (FD_ISSET(runtime_conn_fd, &readfds)) {
-                int n, reply_type = -1;
-
+                http_pool_requests(); // process http requests
+            } else if (FD_ISSET(mqtt_mg_conn->sock, &readfds)) {
+                mqtt_pool_requests(); // process mqtt requests
+            } else if (FD_ISSET(runtime_conn_fd, &readfds)) {
                 n = read(runtime_conn_fd, buffer, BUF_SIZE);
                 if (n <= 0) {
                     runtime_conn_fd = -1;
@@ -96,15 +122,8 @@ int main(int argc, char *argv[])
 
                     parse_response_from_imrtlink(&recv_ctx.message, response);
 
-                    //is_responsed = true;
                     ret = response->status;
                     output_response(response);
-
-                    //if (op.type == REGISTER || op.type == UNREGISTER) {
-                        /* alive time start */
-                    //    total_elpased_ms = 0;
-                     //   bh_get_elpased_ms(&last_check);
-                    //}
                 } else if (reply_type == REPLY_TYPE_EVENT) {
                     request_t event[1] = { 0 };
 
@@ -112,8 +131,9 @@ int main(int argc, char *argv[])
 
                     //if (op.type == REGISTER || op.type == UNREGISTER) {
                         //printf("op=%d\n", op.type);
-                        output_event(event);
+                        //output_event(event);
                     //}
+                    mqtt_process_runtime_event(mqtt_mg_conn, event);
                 } else {
                     printf("received  type:%d\n", reply_type);
                 }
@@ -121,7 +141,7 @@ int main(int argc, char *argv[])
         }
     } /* end of while(1) */
 
-    ret: if (recv_ctx.message.payload != NULL)
+    if (recv_ctx.message.payload != NULL)
         free(recv_ctx.message.payload);
 
     runtime_conn_close();

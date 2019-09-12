@@ -18,7 +18,6 @@ int query(char *name);
 int request(char *url, int action, char *json_payload_file);
 int subscribe(char *urls);
 int unsubscribe(char *urls);
-void output_event(request_t *obj);
 int send_request(request_t *request, bool is_install_wasm_bytecode_app);
 
 PackageType get_package_type(const char *buf, int size);
