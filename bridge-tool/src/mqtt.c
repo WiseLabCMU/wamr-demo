@@ -112,7 +112,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
       payload[msg->payload.len] = '\0';
       
       if (NULL == (json = cJSON_Parse(payload))) { // did not receive valid json; create it
-        const char fmt_str_payload[] = "{ \"msg\": \"%.*s\"}"; 
+        const char fmt_str_payload[] = "{ \"raw_str\": \"%.*s\"}"; 
         int max_len = msg->payload.len+strlen(fmt_str_payload)+1;
         str_json = malloc(max_len);
         snprintf(str_json, max_len, fmt_str_payload, msg->payload.len, msg->payload.p);
@@ -141,8 +141,10 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
 void mqtt_process_runtime_event(struct mg_connection *nc, request_t *event)
 {
     struct mg_mqtt_topic_expression s_topic_expr = {NULL, 0};
+    attr_container_t *payload = (attr_container_t *) event->payload;
+    cJSON *json=NULL, *raw_str = NULL;
+    char *msg_str=NULL;
 
-    //topic[len]='\0';
     if (event->action == COAP_EVENT_SUB) {
         s_topic_expr.topic = event->url;
         printf("Subscribing to MQTT topic '%s'\n", s_topic_expr.topic);
@@ -158,8 +160,35 @@ void mqtt_process_runtime_event(struct mg_connection *nc, request_t *event)
     }
     if (event->action == COAP_EVENT_PUB) {
         printf("Forwarding to MQTT topic '%s'\n", event->url);
-        mg_mqtt_publish(nc, event->url, 65, MG_MQTT_QOS(0), event->payload, event->payload_len);
+
+        payload = (attr_container_t *) event->payload;
+
+        if (payload == NULL || event->payload_len <= 0) {
+          printf("Error getting msg payload!\n");
+          return;
+        }
+
+        if ((json = attr2json(payload)) == NULL) {
+            printf("Error getting msg payload as json!\n");
+            msg_str = strndup(event->payload, event->payload_len);
+        } else {
+          raw_str = cJSON_GetObjectItemCaseSensitive(json, "raw_str");
+          if (cJSON_IsString(raw_str) && (raw_str->valuestring != NULL))
+          {
+            printf("found raw_str\n");
+            msg_str = strdup(raw_str->valuestring); 
+          } else {
+            if ((msg_str = cJSON_Print(json)) == NULL) {            
+              msg_str = strndup(event->payload, event->payload_len);
+            }
+          }
+        }        
+
+        mg_mqtt_publish(nc, event->url, 65, MG_MQTT_QOS(0), msg_str, strlen(msg_str));
         mqtt_pool_requests();
+        if (json != NULL) cJSON_Delete(json);
+        if (msg_str!= NULL)free(msg_str);
+
         return;
     }    
 }

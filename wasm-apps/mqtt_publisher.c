@@ -21,15 +21,24 @@ int num = 0;
 
 void publish_alert()
 {
-    attr_container_t *event;
+    attr_container_t *msg;
 
-    event = attr_container_create("event");
-    attr_container_set_string(&event, "warning", "overheat detected!");
+    // use an attribute container to send a json formatted message
+    msg = attr_container_create("msg"); // "msg" is the attribute container tag; not forwarded to mqtt
 
-    mqtt_publish("alert/overheat", FMT_ATTR_CONTAINER, event,
-            attr_container_get_serialize_length(event));
+    // e.g. the following will create a json string: { "x": 5, "y": 10 }
+     attr_container_set_int(&msg, "x", 5); 
+     attr_container_set_int(&msg, "y", 10);
+    // other versions: set_string, set_float, set_double, set_byte, set_short, set_uint16, set_bool, set_uint64, set_bytearray 
 
-    attr_container_destroy(event);
+    // to publish a *non-json formatted* string, insert the message inside an attribute "raw_str" (other attributes will be ignored)
+    //attr_container_set_string(&msg, "raw_str", "test message!"); // 'overheat detected' will be published to the topic 
+
+    // publish to topic 'alert/test'
+    mqtt_publish("alert/test", FMT_ATTR_CONTAINER, msg,
+            attr_container_get_serialize_length(msg));
+
+    attr_container_destroy(msg);
 }
 
 /* Timer callback */
