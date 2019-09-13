@@ -35,10 +35,10 @@
 #include "runtime_request.h"
 #include "http.h"
 #include "mqtt.h"
+#include "config.h"
 
 #define RECONNECT_ATTEMPTS 3
 
-static uint32_t g_mqtt_keepalive_ms=80000;
 
 int main(int argc, char *argv[])
 {
@@ -54,27 +54,27 @@ int main(int argc, char *argv[])
     int n, reply_type = -1, rconn=0;
     uint32_t last_check, total_elapsed_ms = 0;
   
+    if (read_config() != 0) return -1;
+
     bh_get_elpased_ms(&last_check);
 
-    if (runtime_conn_init(&runtime_conn_fd) != 0)
-        return -1;
+    if (runtime_conn_init(&runtime_conn_fd) != 0) return -1;
 
-    if (http_init(&http_mg_conn) != 0 )
-        return -1;
+    if (http_init(&http_mg_conn) != 0 ) return -1;
 
-    if (mqtt_init(&mqtt_mg_conn) != 0 )
-        return -1;
+    if (mqtt_init(&mqtt_mg_conn) != 0 ) return -1;
     
     while (1) {
         total_elapsed_ms += bh_get_elpased_ms(&last_check);
-
-        if (total_elapsed_ms >= g_mqtt_keepalive_ms) {
+/* 
+not needed anylonger ?...
+        if (total_elapsed_ms >= g_bt_config.mqtt_keepalive_ms) {
             mg_mqtt_ping(mqtt_mg_conn);
             mqtt_pool_requests(); // process mqtt requests
             total_elapsed_ms = 0;
         }
-
-        if (rconn > RECONNECT_ATTEMPTS) {
+*/
+        if (rconn > g_bt_config.rt_reconnect_attempts) {
             printf("Error: too many reconnection attempts.\n");
             exit(-1);
         }

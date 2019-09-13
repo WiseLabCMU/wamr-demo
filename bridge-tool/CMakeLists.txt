@@ -37,6 +37,7 @@ set(SSG_LIB_DIR ${REPO_ROOT_DIR}/../host-agent/lib)
 set(EXTERNAL_SOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/../external)
 set (CJSON_DIR ${EXTERNAL_SOURCES_DIR}/cJSON)
 set (MG_DIR ${EXTERNAL_SOURCES_DIR}/mongoose)
+set (INIH_DIR ${EXTERNAL_SOURCES_DIR}/inih)
 
 include (${WASM_DIR}/lib/native-interface/native_interface.cmake)
 include (${APP_MGR_DIR}/app-mgr-shared/app_mgr_shared.cmake)
@@ -58,10 +59,14 @@ set (CJSON_SOURCE ${CJSON_DIR}/cJSON.c)
 # mongoose sources
 set (MG_SOURCE ${MG_DIR}/mongoose.c)
 
+# inih sources
+set (INIH_SOURCE ${INIH_DIR}/ini.c)
+
 include_directories(
     ${CMAKE_CURRENT_LIST_DIR}/src
     ${CJSON_DIR}
     ${MG_DIR}
+    ${INIH_DIR}
 )
 
 file (GLOB_RECURSE BRIDGE_TOOL_SRC src/*.c)
@@ -75,6 +80,7 @@ SET(SOURCES
     ${CJSON_SOURCE}
     ${LIB_HOST_AGENT_SOURCE}
     ${MG_SOURCE}
+    ${INIH_SOURCE}
     )
     
 add_executable(bridge-tool ${SOURCES})
