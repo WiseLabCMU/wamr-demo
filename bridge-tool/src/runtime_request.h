@@ -15,7 +15,7 @@ typedef enum {
 int install(char *file, char *name, char *module_type, char *heap_size, int timers, int watchdog_interval);
 int uninstall(char *name, char *module_type);
 int query(char *name);
-int request(char *url, int action, char *json_payload_file);
+int request(char *url, int action, cJSON *json);
 int subscribe(char *urls);
 int unsubscribe(char *urls);
 int send_request(request_t *request, bool is_install_wasm_bytecode_app);

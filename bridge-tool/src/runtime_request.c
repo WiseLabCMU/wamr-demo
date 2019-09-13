@@ -126,48 +126,27 @@ int query(char *name)
     return ret;
 }
 
-    const char *url;
-    int action;
-    const char *json_payload_file;
-
-int request(char *url, int action, char *json_payload_file)
+int request(char *url, int action, cJSON *json)
 {
     request_t request[1] = { 0 };
     attr_container_t *payload = NULL;
     int ret = -1, payload_len = 0;
 
-    if (json_payload_file != NULL) {
-        char *payload_file;
-        cJSON *json;
-        int payload_file_size;
-
-        if ((payload_file = read_file_to_buffer(json_payload_file,
-                &payload_file_size)) == NULL)
-            return -1;
-
-        if (NULL == (json = cJSON_Parse(payload_file))) {
-            free(payload_file);
-            goto fail;
-        }
-
+    if (json != NULL) {
         if (NULL == (payload = json2attr(json))) {
-            cJSON_Delete(json);
-            free(payload_file);
             goto fail;
         }
         payload_len = attr_container_get_serialize_length(payload);
-
-        cJSON_Delete(json);
-        free(payload_file);
     }
 
     init_request(request, (char *)url, action,
     FMT_ATTR_CONTAINER, payload, payload_len);
     request->mid = gen_random_id();
 
+    printf("Sending request\n");
     ret = send_request(request, false);
 
-    if (json_payload_file != NULL && payload != NULL)
+    if (payload != NULL)
         attr_container_destroy(payload);
 
     fail: return ret;

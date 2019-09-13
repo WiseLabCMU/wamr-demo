@@ -1,12 +1,11 @@
 #include "lib_export.h"
 #include "sensor_api.h"
 #include "connection_api.h"
-//#include "attr_container.h"
-//#include "request.h"
 
 static NativeSymbol extended_native_symbol_defs[] = {
-#include "runtime_sensor.inl"
+//#include "runtime_sensor.inl"
 #include "connection.inl"
+
 //EXPORT_WASM_API(attr_container_dump),
 //EXPORT_WASM_API(api_subscribe_event)
         };

@@ -68,6 +68,10 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
   struct mg_mqtt_message *msg = (struct mg_mqtt_message *) p;
   (void) nc;
 
+  cJSON *json=NULL;
+  char *str_json=NULL, *payload=NULL, *req_url=NULL;
+  int max_len;
+
   //if (ev != MG_EV_POLL) printf("USER HANDLER GOT EVENT %d\n", ev);
 
   switch (ev) {
@@ -90,7 +94,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
       printf("Message publishing acknowledged (msg_id: %d)\n", msg->message_id);
       break;
     case MG_EV_MQTT_SUBACK:
-      printf("Subscription acknowledged, forwarding to '/test'\n");
+      printf("Subscription acknowledged.\n");
       break;
     case MG_EV_MQTT_PUBLISH: {
 #if 0
@@ -101,11 +105,31 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
       printf("Got incoming message %.*s: %.*s\n", (int) msg->topic.len,
              msg->topic.p, (int) msg->payload.len, msg->payload.p);
 #endif
+      //char json_msg[256];
       
+      payload = malloc(msg->payload.len+1);
+      memcpy(payload, msg->payload.p, msg->payload.len);
+      payload[msg->payload.len] = '\0';
+      
+      if (NULL == (json = cJSON_Parse(payload))) { // did not receive valid json; create it
+        const char fmt_str_payload[] = "{ \"payload\": \"%.*s\"}"; 
+        int max_len = msg->payload.len+strlen(fmt_str_payload)+1;
+        str_json = malloc(max_len);
+        snprintf(str_json, max_len, fmt_str_payload, msg->payload.len, msg->payload.p);
+        json = cJSON_Parse(str_json);
+      }
 
-      //printf("Forwarding to /test\n");
-      //mg_mqtt_publish(nc, "/test", 65, MG_MQTT_QOS(0), msg->payload.p,
-      //                msg->payload.len);
+      max_len = msg->topic.len + strlen("/event/") + 1;
+      req_url = malloc(max_len);
+      snprintf(req_url, max_len, "/event/%.*s", msg->topic.len, msg->topic.p);
+      
+      request(req_url, COAP_EVENT_PUB, json);
+      
+      free(req_url);
+      free(payload);
+      if (str_json != NULL) free(str_json);
+      cJSON_Delete(json);
+
       break;
     }
     case MG_EV_CLOSE:
