@@ -26,12 +26,12 @@ endif (NOT TARGET_PLATFORM)
 
 message ("TARGET_PLATFORM = " ${TARGET_PLATFORM})
 
-set(REPO_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/../../wasm-micro-runtime)
-set(WASM_DIR  ${REPO_ROOT_DIR}/core/iwasm)
-set(APP_MGR_DIR ${REPO_ROOT_DIR}/core/app-mgr)
-set(SHARED_DIR ${REPO_ROOT_DIR}/core/shared-lib)
+set(WAMR_ROOT_DIR $ENV{WAMR_DIR})
+set(WASM_DIR  ${WAMR_ROOT_DIR}/core/iwasm)
+set(APP_MGR_DIR ${WAMR_ROOT_DIR}/core/app-mgr)
+set(SHARED_DIR ${WAMR_ROOT_DIR}/core/shared-lib)
 set(CJSON_DIR ${CMAKE_CURRENT_LIST_DIR}/../external/cJSON)
-set(SSG_LIB_DIR ${REPO_ROOT_DIR}/../host-agent/lib)
+set(SSG_LIB_DIR ${WAMR_ROOT_DIR}/../host-agent/lib)
 
 # external modules
 set(EXTERNAL_SOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/../external)

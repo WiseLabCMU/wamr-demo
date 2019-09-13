@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CURR_DIR=$PWD
-WAMR_DIR=${PWD}/../wasm-micro-runtime
+export WAMR_DIR=${PWD}/runtime/wasm-micro-runtime
 OUT_DIR=${PWD}/out
 BUILD_DIR=${PWD}/build
 

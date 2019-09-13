@@ -7,3 +7,6 @@
 [submodule "external/inih"]
 	path = external/inih
 	url = git@github.com:benhoyt/inih.git
+[submodule "runtime/wasm-micro-runtime"]
+	path = runtime/wasm-micro-runtime
+	url = git@github.com:WiseLabCMU/wasm-micro-runtime.git

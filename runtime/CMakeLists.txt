@@ -43,7 +43,7 @@ message ("PLATFORM = " ${PLATFORM})
 set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections -Wall -Wno-unused-parameter -Wno-pedantic")
 
-set(WAMR_ROOT_DIR ~/wasm-micro-runtime)
+set(WAMR_ROOT_DIR $ENV{WAMR_DIR})
 set(WASM_DIR  ${WAMR_ROOT_DIR}/core/iwasm)
 set(APP_MGR_DIR ${WAMR_ROOT_DIR}/core/app-mgr)
 set(SHARED_DIR ${WAMR_ROOT_DIR}/core/shared-lib)
