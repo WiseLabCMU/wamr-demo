@@ -112,7 +112,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
       payload[msg->payload.len] = '\0';
       
       if (NULL == (json = cJSON_Parse(payload))) { // did not receive valid json; create it
-        const char fmt_str_payload[] = "{ \"payload\": \"%.*s\"}"; 
+        const char fmt_str_payload[] = "{ \"msg\": \"%.*s\"}"; 
         int max_len = msg->payload.len+strlen(fmt_str_payload)+1;
         str_json = malloc(max_len);
         snprintf(str_json, max_len, fmt_str_payload, msg->payload.len, msg->payload.p);

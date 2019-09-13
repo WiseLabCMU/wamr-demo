@@ -12,7 +12,7 @@
 #include "mongoose.h"
 #include "attr_container.h"
 
-#define WASM_FILES_FOLDER "../../out/wasm-apps"
+#define WASM_FILES_FOLDER "./wasm-apps"
 
 #define HTTP_OK_200 200
 #define HTTP_CREATED_201 201
