@@ -14,13 +14,12 @@
 
 typedef struct
 {
-    const char* mqtt_server;
-    uint32_t mqtt_port;
+    const char* mqtt_server_address;
     uint32_t mqtt_keepalive_ms;
     const char* mqtt_user_name;
     const char* mqtt_password;
 
-    uint32_t http_port;
+    const char* http_port;
     const char* http_doc_root;
     const char* http_enable_directory_listing;
 
