@@ -39,7 +39,6 @@
 
 #define RECONNECT_ATTEMPTS 3
 
-
 int main(int argc, char *argv[])
 {
     int ret;
@@ -66,14 +65,13 @@ int main(int argc, char *argv[])
     
     while (1) {
         total_elapsed_ms += bh_get_elpased_ms(&last_check);
-/* 
-not needed anylonger ?...
+
         if (total_elapsed_ms >= g_bt_config.mqtt_keepalive_ms) {
             mg_mqtt_ping(mqtt_mg_conn);
             mqtt_pool_requests(); // process mqtt requests
             total_elapsed_ms = 0;
         }
-*/
+        
         if (rconn > g_bt_config.rt_reconnect_attempts) {
             printf("Error: too many reconnection attempts.\n");
             exit(-1);

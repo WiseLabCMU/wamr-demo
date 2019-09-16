@@ -15,13 +15,7 @@
 #include "runtime_request.h"
 #include "runtime_conn.h"
 #include "bridge_tool_utils.h"
-
-static const char *s_address = "oz.andrew.cmu.edu:1883";
-static const char *s_user_name = NULL;
-static const char *s_password = NULL;
-
-//static const char *s_topic = "alert/overheat";
-//static struct mg_mqtt_topic_expression s_topic_expr = {NULL, 0};
+#include "config.h" 
 
 static struct mg_mgr g_mqtt_mgr;
 
@@ -36,15 +30,15 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p);
 int mqtt_init(struct mg_connection **mqtt_mg_conn)
 {
     mg_mgr_init(&g_mqtt_mgr, NULL);
-    *mqtt_mg_conn = mg_connect(&g_mqtt_mgr, s_address, mqtt_ev_handler);
+    *mqtt_mg_conn = mg_connect(&g_mqtt_mgr, g_bt_config.mqtt_server_address, mqtt_ev_handler);
     if (*mqtt_mg_conn == NULL) {
-        fprintf(stderr, "Error connecting to MQTT server: %s.\n", s_address);
+        fprintf(stderr, "Error connecting to MQTT server: %s.\n", g_bt_config.mqtt_server_address);
         return -1;
     } 
 
     while (mg_mgr_poll(&g_mqtt_mgr, 1000) > 0); // establish the connection
 
-    printf("Connected to MQTT server: %s.\n", s_address);
+    printf("Connected to MQTT server: %s.\n", g_bt_config.mqtt_server_address);
     return 0;
 }
 
@@ -78,8 +72,8 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
     case MG_EV_CONNECT: {
       struct mg_send_mqtt_handshake_opts opts;
       memset(&opts, 0, sizeof(opts));
-      opts.user_name = s_user_name;
-      opts.password = s_password;
+      opts.user_name =  g_bt_config.mqtt_user_name;
+      opts.password = g_bt_config.mqtt_password;
 
       mg_set_protocol_mqtt(nc);
       mg_send_mqtt_handshake_opt(nc, "dummy", opts);

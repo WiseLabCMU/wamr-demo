@@ -15,7 +15,7 @@
 
 bt_config_t g_bt_config;
 
-static const char g_config_file_path[] = "../config.ini";
+static const char g_config_file_path[] = "config.ini";
 
 static int conf_handler(void* user, const char* section, const char* name,
                    const char* value)
@@ -23,15 +23,12 @@ static int conf_handler(void* user, const char* section, const char* name,
     bt_config_t* pconfig = (bt_config_t*)user;
 
     #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
-    if (MATCH("mqtt", "server")) {
-        pconfig->mqtt_server = strdup(value);
-        printf("mqtt_server = %s\n", pconfig->mqtt_server);
-    } else if (MATCH("mqtt", "port")) {
-        pconfig->mqtt_port = atol(value);
-        printf("mqtt_port = %u\n", pconfig->mqtt_port);
+    if (MATCH("mqtt", "server_address")) {
+        pconfig->mqtt_server_address = strdup(value);
+        printf("mqtt_server_address = %s\n", pconfig->mqtt_server_address);
     } else if (MATCH("mqtt", "keepalive_ms")) {
         pconfig->mqtt_keepalive_ms = atol(value);
-        printf("mqtt_keepalive_ms = %u\n", pconfig->mqtt_keepalive_ms);
+        printf("mqtt_keepalive_ms = %u\n", pconfig->mqtt_keepalive_ms);    
     } else if (MATCH("mqtt", "user-name")) {
         if (strlen(value) == 0) {
             pconfig->mqtt_user_name = NULL;
@@ -49,8 +46,8 @@ static int conf_handler(void* user, const char* section, const char* name,
             printf("mqtt_password = %s\n", pconfig->mqtt_password);
         }
     } else if (MATCH("http", "port")) {
-        pconfig->http_port = atol(value);
-        printf("http_port = %u\n", pconfig->http_port);    
+        pconfig->http_port = strdup(value);
+        printf("http_port = %s\n", pconfig->http_port);    
     } else if (MATCH("http", "doc-root")) {
         pconfig->http_doc_root = strdup(value);
         printf("http_doc_root = %s\n", pconfig->http_doc_root);    

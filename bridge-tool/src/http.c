@@ -15,9 +15,7 @@
 #include "runtime_request.h"
 #include "runtime_conn.h"
 #include "bridge_tool_utils.h"
-
-static const char *s_http_port = "8000";
-static const char *s_doc_root = ".";
+#include "config.h"
 
 static struct mg_serve_http_opts s_http_server_opts;
 
@@ -37,18 +35,18 @@ static void http_handle_modules(struct mg_connection *nc, struct http_message *h
  */
 int http_init(struct mg_connection **http_mg_conn)
 {
-    s_http_server_opts.document_root = s_doc_root;
-    s_http_server_opts.enable_directory_listing = "no";
+    s_http_server_opts.document_root = g_bt_config.http_doc_root;
+    s_http_server_opts.enable_directory_listing = g_bt_config.http_enable_directory_listing;
 
     mg_mgr_init(&g_http_mgr, NULL);
-    *http_mg_conn = mg_bind(&g_http_mgr, s_http_port, http_ev_handler);
+    *http_mg_conn = mg_bind(&g_http_mgr, g_bt_config.http_port, http_ev_handler);
     if (*http_mg_conn == NULL) {
-        fprintf(stderr, "Error starting server on port %s:\n", s_http_port);
+        fprintf(stderr, "Error starting server on port %s:\n", g_bt_config.http_port);
         return -1;
     }
     mg_set_protocol_http_websocket(*http_mg_conn);
 
-    printf("Starting RESTful server on port %s.\n", s_http_port);
+    printf("Starting RESTful server on port %s.\n", g_bt_config.http_port);
     return 0;
 }
 
@@ -146,7 +144,7 @@ static void http_handle_modules(struct mg_connection *nc, struct http_message *h
         return;
     }
    
-    snprintf(str_filepath, sizeof(str_filepath), "%s/%s", WASM_FILES_FOLDER, str_wasm_file);
+    snprintf(str_filepath, sizeof(str_filepath), "%s/%s", g_bt_config.rt_wasm_files_folder, str_wasm_file);
     printf("installing: %s\n", str_filepath);
     if (install(str_filepath, str_module_name, NULL, NULL, 0, 0) < 0) {
         http_printf_with_status(nc, HTTP_INTERNAL_SERVER_ERROR_5_00, FMT_STR_JSON_ERROR_MSG, "Error installing (wasm file not found?).");

@@ -41,6 +41,7 @@ echo "#####################build runtime project success"
 echo "#####################build bridge"
 cd ${CURR_DIR}/bridge-tool
 mkdir -p out
+cp config.ini out
 cd out
 cmake ..
 make
@@ -49,6 +50,7 @@ if [ $? != 0 ];then
         exit 2
 fi
 cp bridge-tool ${OUT_DIR}
+cp config.ini ${OUT_DIR}
 echo "#####################build host-tool success"
 
 if [ "$1" == "all" ];then

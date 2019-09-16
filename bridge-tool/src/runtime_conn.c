@@ -32,17 +32,12 @@
 #include "attr_container.h"
 #include "http.h"
 #include "runtime_conn.h"
+#include "config.h" 
 
 #include "app_manager_export.h" /* for Module_WASM_App */
 #include "host_link.h" /* for REQUEST_PACKET */
 
 static int g_runtime_conn_fd; /* may be tcp or uart */
-
-static char *g_runtime_addr = "127.0.0.1";
-static int g_connection_mode = CONNECTION_MODE_TCP;
-static int g_runtime_port = 8888;
-static char *g_uart_dev = "/dev/ttyS2";
-static int g_baudrate = B115200;
 
 static uint32_t g_timeout_ms = DEFAULT_TIMEOUT_MS;
 
@@ -282,15 +277,15 @@ int on_imrt_link_byte_arrive(unsigned char ch, imrt_link_recv_context_t *ctx)
 
 int runtime_conn_init(int *runtime_conn_fd)
 {
-    if (g_connection_mode == CONNECTION_MODE_TCP) {
+    if (g_bt_config.rt_connection_mode == CONNECTION_MODE_TCP) {
         int fd;
-        if (!tcp_init(g_runtime_addr, g_runtime_port, &fd))
+        if (!tcp_init(g_bt_config.rt_address, g_bt_config.rt_port, &fd))
             return -1;
         g_runtime_conn_fd = *runtime_conn_fd = fd;
         return 0;
-    } else if (g_connection_mode == CONNECTION_MODE_UART) {
+    } else if (g_bt_config.rt_connection_mode == CONNECTION_MODE_UART) {
         int fd;
-        if (!uart_init(g_uart_dev, g_baudrate, &fd))
+        if (!uart_init(g_bt_config.rt_uart_dev, g_bt_config.rt_uart_baudrate, &fd))
             return -1;
         g_runtime_conn_fd = *runtime_conn_fd = fd;
         return 0;

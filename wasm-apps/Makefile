@@ -1,6 +1,6 @@
 EMCC=${EMSDK}/fastcomp/emscripten/emcc # EMSDK must be defined to the root of emscriptien install
 
-IWASM_ROOT=$(CURDIR)/../../wasm-micro-runtime/core/iwasm
+IWASM_ROOT=$(CURDIR)/../runtime/wasm-micro-runtime/core/iwasm
 APP_LIBS=${IWASM_ROOT}/lib/app-libs
 NATIVE_LIBS=${IWASM_ROOT}/lib/native-interface
 
