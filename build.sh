@@ -12,7 +12,7 @@ APP_LIBS=${IWASM_ROOT}/lib/app-libs
 NATIVE_LIBS=${IWASM_ROOT}/lib/native-interface
 APP_LIB_SRC="${APP_LIBS}/base/*.c ${APP_LIBS}/extension/sensor/*.c ${APP_LIBS}/extension/connection/*.c ${NATIVE_LIBS}/*.c"
 WASM_APPS=${PWD}/wasm-apps
-
+HTTP_UPLOAD=${PWD}/http_upload
 if [ "$1" == "clean" ]; then
  rm -rf ${OUT_DIR}
  exit 1
@@ -46,12 +46,24 @@ cd out
 cmake ..
 make
 if [ $? != 0 ];then
-        echo "BUILD_FAIL host tool exit as $?\n"
+        echo "BUILD_FAIL bridge tool exit as $?\n"
         exit 2
 fi
 cp bridge-tool ${OUT_DIR}
 cp config.ini ${OUT_DIR}
-echo "#####################build host-tool success"
+echo "#####################build bridge-tool success"
+
+[[ -d ${OUT_DIR}/wasm-apps ]] || mkdir ${OUT_DIR}/wasm-apps
+
+echo "#####################build http upload"
+cd ${HTTP_UPLOAD}
+make
+if [ $? != 0 ];then
+        echo "BUILD_FAIL http upload exit as $?\n"
+        exit 2
+fi
+cp out/http_upload ${OUT_DIR}
+echo "#####################build http upload done"
 
 if [ "$1" == "all" ];then
     [[ -d ${OUT_DIR}/wasm-apps ]] || mkdir ${OUT_DIR}/wasm-apps

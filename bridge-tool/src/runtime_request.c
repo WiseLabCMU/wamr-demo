@@ -35,12 +35,11 @@ extern int g_mid;
 /*return:
  0: success
  others: fail*/
-int install(char *file, char *name, char *module_type, char *heap_size, int timers, int watchdog_interval)
+int install(char *filename, char *app_file_buf, int app_size, char *name, char *module_type, int heap_size, int timers, int watchdog_interval)
 {
     request_t request[1] = { 0 };
-    char *app_file_buf;
     char url[URL_MAX_LEN] = { 0 };
-    int ret = -1, app_size;
+    int ret = -1;
     bool is_wasm_bytecode_app;
 
     snprintf(url, sizeof(url) - 1, "/applet?name=%s", name);
@@ -63,13 +62,17 @@ int install(char *file, char *name, char *module_type, char *heap_size, int time
 
     /*TODO: permissions to access JLF resource: AUDIO LOCATION SENSOR VISION platform.SERVICE */
 
-    if ((app_file_buf = read_file_to_buffer(file, &app_size)) == NULL) {
-        printf("Error reading file! %s\n", file);
+    if (app_file_buf == NULL && filename != NULL) { 
+        app_file_buf = read_file_to_buffer(filename, &app_size);
+    }
+
+    if (app_file_buf == NULL || app_size <= 0) {
+        printf("Error reading file! %s\n", filename);
         return -1;
     }
 
-    init_request(request, url, COAP_PUT,
-    FMT_APP_RAW_BINARY, app_file_buf, app_size);
+    printf ("Installing size=%d \n", app_size);
+    init_request(request, url, COAP_PUT, FMT_APP_RAW_BINARY, app_file_buf, app_size);
     request->mid = g_mid = gen_random_id();
 
     if ((module_type == NULL || strcmp(module_type, "wasm") == 0)

@@ -48,7 +48,6 @@ set(WASM_DIR  ${WAMR_ROOT_DIR}/core/iwasm)
 set(APP_MGR_DIR ${WAMR_ROOT_DIR}/core/app-mgr)
 set(SHARED_DIR ${WAMR_ROOT_DIR}/core/shared-lib)
 
-
 enable_language (ASM)
 
 include (${WASM_DIR}/runtime/platform/${TARGET_PLATFORM}/platform.cmake)
@@ -67,7 +66,6 @@ include (${SHARED_DIR}/utils/shared_utils.cmake)
 include (${SHARED_DIR}/mem-alloc/mem_alloc.cmake)
 include (${SHARED_DIR}/coap/lib_coap.cmake)
 
-
 include_directories(${SHARED_DIR}/include)
 
 #Note: uncomment below line to use UART mode
@@ -75,6 +73,7 @@ include_directories(${SHARED_DIR}/include)
 add_definitions (-DWASM_ENABLE_BASE_LIB)
 add_definitions (-Dattr_container_malloc=bh_malloc)
 add_definitions (-Dattr_container_free=bh_free)
+add_definitions (-DMG_ENABLE_HTTP_STREAMING_MULTIPART)
 
 add_library (vmlib
              ${WASM_PLATFORM_LIB_SOURCE}

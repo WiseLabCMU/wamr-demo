@@ -12,7 +12,7 @@ typedef enum {
     Wasm_Module_Bytecode = 0, Wasm_Module_AoT, Package_Type_Unknown = 0xFFFF
 } PackageType;
 
-int install(char *file, char *name, char *module_type, char *heap_size, int timers, int watchdog_interval);
+int install(char *filename, char *app_file_buf, int app_size, char *name, char *module_type, int heap_size, int timers, int watchdog_interval);
 int uninstall(char *name, char *module_type);
 int query(char *name);
 int request(char *url, int action, cJSON *json);

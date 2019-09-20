@@ -12,24 +12,26 @@
 #include <stdint.h>
 #include "ini.h"
 
+#define STR_MAXLEN 100
+
 typedef struct
 {
-    const char* mqtt_server_address;
+    char mqtt_server_address[STR_MAXLEN];
     uint32_t mqtt_keepalive_ms;
-    const char* mqtt_user_name;
-    const char* mqtt_password;
+    char mqtt_user_name[STR_MAXLEN];
+    char mqtt_password[STR_MAXLEN];
 
-    const char* http_port;
-    const char* http_doc_root;
-    const char* http_enable_directory_listing;
+    char http_port[STR_MAXLEN];
+    char http_doc_root[STR_MAXLEN];
+    char http_enable_directory_listing[STR_MAXLEN];
 
-    const char* rt_address;
+    char rt_address[STR_MAXLEN];
     uint32_t rt_port;
     uint32_t rt_reconnect_attempts;
     uint32_t rt_connection_mode;
-    const char *rt_uart_dev;
+    char rt_uart_dev[STR_MAXLEN];
     uint32_t rt_uart_baudrate;
-    const char* rt_wasm_files_folder;
+    char rt_wasm_files_folder[STR_MAXLEN];
 } bt_config_t;
 
 extern bt_config_t g_bt_config;
