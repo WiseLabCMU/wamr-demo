@@ -44,7 +44,7 @@ curl -v -H "Content-Type: application/json" -d '{"name":"pub", "wasm_file":"mqtt
 
 > The default port is ```8000```. This is configured in the file ```config.ini```.
 
-> The file indicated (*mqtt_publisher.wasm* in the example) **must** exist in the runtime local folder ```wasm-apps/``` (configurable in ```config.ini```). To upload a file, you can use the upload utility (see below).
+> The file indicated (*mqtt_publisher.wasm* in the example) **must** exist in the runtime local folder ```wasm-apps/``` (configurable in ```config.ini```). To upload a file, you can use the upload utility (see [bellow](https://github.com/WiseLabCMU/wamr-demo/blob/master/README.md#wasm-file-upload-utility)).
 
 **Uninstall** module named 'pub':
 ```
@@ -67,7 +67,7 @@ You can also install/uninstall WASM modules.
 ```
 mosquitto_pub -t arena/r/<runtime uuid> -h oz.andrew.cmu.edu -m '{ "id":"runtime uuid", "cmd": "module-inst", "name": "pub", "wasm_file": "mqtt_publisher.wasm" }’
 ```
-> The file indicated (*mqtt_publisher.wasm* in the example) **must** exist in the runtime local folder ```wasm-apps/``` (configurable in ```config.ini```). To upload a file, you can use the upload utility (see bellow).
+> The file indicated (*mqtt_publisher.wasm* in the example) **must** exist in the runtime local folder ```wasm-apps/``` (configurable in ```config.ini```). To upload a file, you can use the upload utility (see [bellow](https://github.com/WiseLabCMU/wamr-demo/blob/master/README.md#wasm-file-upload-utility)).
 
 ### WASM File Upload Utility
 
