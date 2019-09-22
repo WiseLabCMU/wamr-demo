@@ -1,5 +1,5 @@
 #include "wasm_app.h"
-#include "mqtt-pubsub.h"
+#include "mqtt_pubsub.h"
 
 void mqtt_evt_handler(request_t *request)
 {

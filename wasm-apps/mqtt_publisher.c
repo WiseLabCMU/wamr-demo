@@ -1,7 +1,5 @@
 #include "wasm_app.h"
-#include "mqtt-pubsub.h"
-
-int num = 0;
+#include "mqtt_pubsub.h"
 
 void publish_alert()
 {
