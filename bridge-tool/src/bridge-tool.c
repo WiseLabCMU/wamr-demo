@@ -110,6 +110,7 @@ int main(int argc, char *argv[])
                 n = read(runtime_conn_fd, buffer, BUF_SIZE);
                 if (n <= 0) {
                     runtime_conn_fd = -1;
+                    printf("error!\n");
                     continue;
                 }
 
@@ -132,6 +133,7 @@ int main(int argc, char *argv[])
                         //output_event(event);
                     //}
                     mqtt_process_runtime_event(mqtt_mg_conn, event);
+                    printf("received event to: %s\n", event->url);
                 } else {
                     printf("received  type:%d\n", reply_type);
                 }

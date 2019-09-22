@@ -46,8 +46,7 @@ int mqtt_init(struct mg_connection **mqtt_mg_conn) {
     return -1;
   }
 
-  while (mg_mgr_poll(&g_mqtt_mgr, 1000) > 0)
-    ; // establish the connection
+  while (mg_mgr_poll(&g_mqtt_mgr, 10) > 0); // establish the connection
 
   // init start message
   snprintf(started_msg, sizeof(started_msg), FMTSTR_RT_CMD_RT_START_JSON,
@@ -59,8 +58,7 @@ int mqtt_init(struct mg_connection **mqtt_mg_conn) {
   mg_mqtt_publish(*mqtt_mg_conn, topic_str, 65, MG_MQTT_QOS(0), started_msg,
                   strlen(started_msg));
 
-  while (mg_mgr_poll(&g_mqtt_mgr, 1000) > 0)
-    ; // publish
+  while (mg_mgr_poll(&g_mqtt_mgr, 10) > 0); // publish
 
   printf("Connected to MQTT server: %s.\n", g_bt_config.mqtt_server_address);
   return 0;
@@ -71,8 +69,7 @@ int mqtt_init(struct mg_connection **mqtt_mg_conn) {
  *
  */
 void mqtt_pool_requests() {
-  while (mg_mgr_poll(&g_mqtt_mgr, 1000) > 0)
-    ; // drive mg mgr state machine
+  while (mg_mgr_poll(&g_mqtt_mgr, 1) > 0); // drive mg mgr state machine
 }
 
 void handle_module_install(struct mg_connection *nc,
