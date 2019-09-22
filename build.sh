@@ -55,25 +55,27 @@ echo "#####################build bridge-tool success"
 
 [[ -d ${OUT_DIR}/wasm-apps ]] || mkdir ${OUT_DIR}/wasm-apps
 
-# echo "#####################build http upload"
-# cd ${HTTP_UPLOAD}
-# make
-# if [ $? != 0 ];then
-#         echo "BUILD_FAIL http upload exit as $?\n"
-#         exit 2
-# fi
-# cp out/http_upload ${OUT_DIR}
-# echo "#####################build http upload done"
+echo "#####################build http upload"
+cd ${HTTP_UPLOAD}
+make
+if [ $? != 0 ];then
+        echo "BUILD_FAIL http upload exit as $?\n"
+        exit 2
+fi
+cp out/http_upload ${OUT_DIR}
+echo "#####################build http upload done"
 
+[[ -d ${OUT_DIR}/wasm-apps ]] || mkdir ${OUT_DIR}/wasm-apps
 if [ "$1" == "all" ];then
-    [[ -d ${OUT_DIR}/wasm-apps ]] || mkdir ${OUT_DIR}/wasm-apps
+
     echo "#####################build wasm apps"
     cd ${WASM_APPS}
+    mkdir -p out
     make
     if [ $? != 0 ];then
-            echo "BUILD_FAIL host tool exit as $?\n"
+            echo "BUILD_FAIL build exit as $?\n"
             exit 2
     fi
-
+    cp out/* ${OUT_DIR}/wasm-apps
     echo "#####################build wasm apps done"
 fi

@@ -1,4 +1,4 @@
-/** @file mqtt.c
+/** @file mqtt.h
  *  @brief Definitions of MQTT bridge functions
  *
  *  Definitions of MQTT bridge functions needed for the MQTT end of the bridge
@@ -10,6 +10,7 @@
 #define MQTT_H_
 
 #include "mongoose.h"
+#include "runtime_request.h"
 
 /**
  * Init mqttc connection

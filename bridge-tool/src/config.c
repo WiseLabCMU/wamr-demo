@@ -66,6 +66,12 @@ static int conf_handler(void* user, const char* section, const char* name,
     } else if (MATCH("runtime", "wasm-files-folder")) {
         strncpy(pconfig->rt_wasm_files_folder, value, sizeof(pconfig->rt_wasm_files_folder));
         printf("rt_wasm_files_folder = %s\n", pconfig->rt_wasm_files_folder);
+    } else if (MATCH("runtime", "topic-prefix")) {
+        strncpy(pconfig->rt_topic_prefix, value, sizeof(pconfig->rt_topic_prefix));
+        printf("rt_topic_prefix = %s\n", pconfig->rt_topic_prefix);
+    } else if (MATCH("runtime", "uuid")) {
+        strncpy(pconfig->rt_uuid, value, sizeof(pconfig->rt_uuid));
+        printf("rt_uuid = %s\n", pconfig->rt_uuid);
     } else {
         return 0;  /* unknown section/name, error */
     }
@@ -76,6 +82,6 @@ int read_config() {
     if (ini_parse(g_config_file_path, conf_handler, &g_bt_config) < 0) {
         printf("Can't load 'config.ini'\n");
         return -1;
-    }    
+    }   
     return 0;
 }

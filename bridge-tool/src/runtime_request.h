@@ -2,6 +2,7 @@
 #define RUNTIME_REQ_H_
 
 #include "app_manager_export.h" /* for Module_WASM_App */
+#include "cJSON.h"
 
 typedef enum {
     INSTALL, UNINSTALL, QUERY, REQUEST, REGISTER, UNREGISTER

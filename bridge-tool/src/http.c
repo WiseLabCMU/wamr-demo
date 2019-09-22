@@ -16,9 +16,7 @@
 #include "runtime_conn.h"
 #include "bridge_tool_utils.h"
 #include "config.h"
-
-static const char *s_name_var="name";
-static const char *s_wasm_file_var="wasm_file";
+#include "http_mqtt_req.h"
 
 static struct mg_serve_http_opts s_http_server_opts;
 
@@ -27,6 +25,8 @@ static struct mg_mgr g_http_mgr;
 static void http_printf_with_status(struct mg_connection *nc, int http_status, const char *content_type_header, const char *fmt, ...);
 static int coap_to_http_status(int coap_status);
 static void http_handle_modules(struct mg_connection *nc, struct http_message *hm);
+static int http_handle_module_install(struct mg_connection *nc, struct http_message *hm);
+static int http_handle_module_uninstall(struct mg_connection *nc, struct http_message *hm);
 
 /**
  * Init http server
@@ -72,23 +72,8 @@ void http_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
   switch (ev) {
     case MG_EV_HTTP_REQUEST:
-      if (mg_vcmp(&hm->uri, "/api/v1/test") == 0) {
-
-        //cJSON *monitor_json = cJSON_Parse(monitor);
-
-        //install(FILE_SUB, MODULE_NAME_SUB, NULL, NULL, 0, 0);
-        //get_request_response(nc);
-
-      } else if (mg_vcmp(&hm->uri, "/cwasm/v1/modules") == 0) {
+      if (mg_vcmp(&hm->uri, "/cwasm/v1/modules") == 0) {
           http_handle_modules(nc, hm);
-      } else if (mg_vcmp(&hm->uri, "/cwasm/v1/modules/upload") == 0) {
-      } else if (mg_vcmp(&hm->uri, "/api/v1/query") == 0) {
-        /* Send headers */
-        mg_printf(nc, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
-
-        /*  send response as a JSON object */
-        mg_printf_http_chunk(nc, "{ \"result\": \"ok\" }");
-        mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
       } else {
         mg_serve_http(nc, hm, s_http_server_opts); /* Serve static content */
       }
@@ -98,62 +83,125 @@ void http_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   }
 }
 
-static void http_handle_modules(struct mg_connection *nc, struct http_message *hm) {
+static int http_handle_module_uninstall(struct mg_connection *nc, struct http_message *hm) {
+    char str_module_name[50]="";
+
+    struct mg_str *hdr = mg_get_http_header(hm, "Content-Type");
+        if (mg_vcmp(hdr, "application/x-www-form-urlencoded") == 0) {
+            if (mg_get_http_var(&hm->body, REQ_NAME_VAR, str_module_name, sizeof(str_module_name)) <= 0) {
+                http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Missing module name.");
+                return -1;
+            }  
+        } else if (mg_vcmp(hdr, "application/json") == 0) {
+            const cJSON *json_module_name = NULL;
+            // make sure boy  is null-terminated
+            char *http_body = malloc(hm->body.len+1);
+            memcpy(http_body,hm->body.p, hm->body.len);
+            http_body[hm->body.len]='\0';
+            cJSON *req_json = cJSON_Parse(http_body);
+            if (req_json == NULL) {
+                http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Could not parse request json.");
+                free(http_body);
+                return -1;
+            }
+            json_module_name = cJSON_GetObjectItemCaseSensitive(req_json, REQ_NAME_VAR);
+            if (cJSON_IsString(json_module_name) && (json_module_name->valuestring != NULL)) {
+                strncpy(str_module_name, json_module_name->valuestring, sizeof(str_module_name));
+            } else {
+                http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Could not parse json for 'name'.");
+                cJSON_Delete(req_json);
+                free(http_body);
+                return -1;
+            }
+            cJSON_Delete(req_json);
+            free(http_body);         
+        } else {
+            http_printf_with_status(nc, HTTP_UNSUPPORTED_MEDIA_TYPE_415, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Only support x-www-form-urlencoded and json media types.");
+            return -1;
+        }
+    printf("uninstalling module: %s\n", str_module_name);
+    if (uninstall(str_module_name, NULL) < 0) {
+        http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Error installing (wasm file not found?).");
+        return -1;
+    }
+    return 0;
+}
+
+static int http_handle_module_install(struct mg_connection *nc, struct http_message *hm) {
     char str_filepath[100]="", str_module_name[50]="", str_wasm_file[50]=""; 
 
-    if (mg_vcmp(&hm->method, "GET") == 0) {
-        http_printf_with_status(nc, HTTP_NOT_IMPLEMENTED_501, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "To do...");
-    } else if (mg_vcmp(&hm->method, "POST") == 0) {
         struct mg_str *hdr = mg_get_http_header(hm, "Content-Type");
         if (mg_vcmp(hdr, "application/x-www-form-urlencoded") == 0) {
-            if (mg_get_http_var(&hm->body, s_name_var, str_module_name, sizeof(str_module_name)) <= 0) {
+            if (mg_get_http_var(&hm->body, REQ_NAME_VAR, str_module_name, sizeof(str_module_name)) <= 0) {
                 http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Missing module name.");
-                return;
+                return -1;
             }  
-            if (mg_get_http_var(&hm->body, s_wasm_file_var, str_wasm_file, sizeof(str_wasm_file)) <= 0) {
+            if (mg_get_http_var(&hm->body, REQ_FILENAME_VAR, str_wasm_file, sizeof(str_wasm_file)) <= 0) {
                 http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Missing wasm file name.");
-                return;
+                return -1;
             } else {
                 snprintf(str_filepath, sizeof(str_filepath), "%s/%s", g_bt_config.rt_wasm_files_folder, str_wasm_file);
             }
         } else if (mg_vcmp(hdr, "application/json") == 0) {
             const cJSON *json_module_name = NULL;
             const cJSON *json_wasm_file = NULL;
-            cJSON *req_json = cJSON_Parse(hm->body.p);
+            // make sure boy  is null-terminated
+            char *http_body = malloc(hm->body.len+1);
+            memcpy(http_body,hm->body.p, hm->body.len);
+            http_body[hm->body.len]='\0';
+            cJSON *req_json = cJSON_Parse(http_body);
             if (req_json == NULL) {
                 http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Could not parse request json.");
-                return;
+                free(http_body);
+                return -1;
             }
-            json_module_name = cJSON_GetObjectItemCaseSensitive(req_json, s_name_var);
+            json_module_name = cJSON_GetObjectItemCaseSensitive(req_json, REQ_NAME_VAR);
             if (cJSON_IsString(json_module_name) && (json_module_name->valuestring != NULL)) {
                 strncpy(str_module_name, json_module_name->valuestring, sizeof(str_module_name));
             } else {
                 http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Could not parse json for 'name'.");
-                return;
+                cJSON_Delete(req_json);
+                free(http_body);
+                return -1;
             }
-            json_wasm_file = cJSON_GetObjectItemCaseSensitive(req_json, s_wasm_file_var);
+            json_wasm_file = cJSON_GetObjectItemCaseSensitive(req_json, REQ_FILENAME_VAR);
             if (cJSON_IsString(json_wasm_file) && (json_wasm_file->valuestring != NULL)) {
                 snprintf(str_filepath, sizeof(str_filepath), "%s/%s", g_bt_config.rt_wasm_files_folder, json_wasm_file->valuestring);
             } else {
                 http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Could not parse jason for 'wasm_file'.");
-                return;
+                cJSON_Delete(req_json);
+                free(http_body);
+                return -1;
             }
-
+            cJSON_Delete(req_json);
+            free(http_body);         
         } else {
             http_printf_with_status(nc, HTTP_UNSUPPORTED_MEDIA_TYPE_415, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Only support x-www-form-urlencoded and json media types.");
-            return;
+            return -1;
         }
-    } else {
-        http_printf_with_status(nc, HTTP_METHOD_NOT_ALLOWED_405, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Method not supported.");
-        return;
-    }
 
     printf("installing from file: %s\n", str_filepath);
     if (install(str_filepath, NULL, 0, str_module_name, NULL, 0, 0, 0) < 0) {
         http_printf_with_status(nc, HTTP_BAD_REQUEST_400, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Error installing (wasm file not found?).");
+        return -1;
+    }
+    return 0;
+}
+
+static void http_handle_modules(struct mg_connection *nc, struct http_message *hm) {
+    if (mg_vcmp(&hm->method, "GET") == 0) {
+        http_printf_with_status(nc, HTTP_NOT_IMPLEMENTED_501, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "To do...");
+    } else if (mg_vcmp(&hm->method, "POST") == 0) {
+        if (http_handle_module_install(nc, hm) >= 0) get_request_response(nc);
+    } else if (mg_vcmp(&hm->method, "DELETE") == 0) {
+        if (http_handle_module_uninstall(nc, hm) >= 0) get_request_response(nc);
+    } else if (mg_vcmp(&hm->method, "GET") == 0) {
+        if (query(NULL) >= 0) get_request_response(nc);
+    } else {    
+        http_printf_with_status(nc, HTTP_METHOD_NOT_ALLOWED_405, CT_HEADER_JSON, FMT_STR_JSON_ERROR_MSG, "Method not supported.");
         return;
     }
-    get_request_response(nc);
+    
 }
 
 static int coap_to_http_status(int coap_status)

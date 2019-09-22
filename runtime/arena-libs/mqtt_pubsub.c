@@ -3,7 +3,7 @@
 #include "request.h"
 #include "shared_utils.h"
 #include "wasm_app.h"
-#include "mqtt-pubsub.h"
+#include "mqtt_pubsub.h"
 
 bool mqtt_publish(const char *url, int fmt, void *payload, int payload_len)
 {

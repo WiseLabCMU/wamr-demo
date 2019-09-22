@@ -32,6 +32,8 @@ typedef struct
     char rt_uart_dev[STR_MAXLEN];
     uint32_t rt_uart_baudrate;
     char rt_wasm_files_folder[STR_MAXLEN];
+    char rt_topic_prefix[STR_MAXLEN];
+    char rt_uuid[STR_MAXLEN];
 } bt_config_t;
 
 extern bt_config_t g_bt_config;
