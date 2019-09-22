@@ -1,21 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h> 
 #include "wasm_app.h"
 #include "mqtt_pubsub.h"
+#include "stdlib-legacy.h" // gcvt()
 
-#define MSG_FORMAT_STR "%s,%d,%d,%d,0,0,0,0,1,1,1,#FFEEAA,on"
+#define MSG_FORMAT_STR "%s,%s,%s,%s,0,0,0,0,1,1,1,#FFEEAA,on"
 #define STR_MAX_LEN 50
 
-char obj_name[]="sphere_145";
+char obj_name[STR_MAX_LEN];
 char topic[STR_MAX_LEN];
 
-int x=0, y=1, z=1;
+float x=0, y=1, z=1;
 int i=0, d=0;
 
 /* Timer callback */
 void timer1_update(user_timer_t timer)
 {
+    char str_x[20], str_y[20], str_z[20];
     attr_container_t *msg;
     char str_msg[STR_MAX_LEN];    
 
@@ -23,18 +26,22 @@ void timer1_update(user_timer_t timer)
     msg = attr_container_create("msg"); // "msg" is the attribute container tag; not forwarded to mqtt
 
     if (d == 0) {
-        x = x + 2;
-        z -= 1; 
+        x = x + 0.2;
+        z += (double)rand() / (double)RAND_MAX + 0.5; 
         i++;
     } else {
-        x = x - 2;
-        z += 1; 
+        x = x - 0.2;
+        z -= (double)rand() / (double)RAND_MAX + 0.5; 
         i--;
     }
-    snprintf(str_msg, STR_MAX_LEN, MSG_FORMAT_STR, obj_name, x, y, z);
+    // convert floaf to string; (need due to buf in snprintf's %f)
+    gcvt(x, 5, str_x); 
+    gcvt(y, 5, str_y); 
+    gcvt(z, 5, str_z); 
+    snprintf(str_msg, STR_MAX_LEN, MSG_FORMAT_STR, obj_name, str_x, str_y, str_z);
 
     // change direction
-    if (i == 10 || i == 0) d=!d;
+    if (i == 100 || i == 0) d=!d;
 
     // publish message
     attr_container_set_string(&msg, "raw_str", str_msg); 
@@ -56,6 +63,9 @@ void start_timer()
 
 void on_init()
 {
+    srand(time(0));
+    int i = rand();
+    snprintf(obj_name, STR_MAX_LEN, "sphere_%d", 1000 + rand() % 1000); // large random id to avoid name collisions
     snprintf(topic, STR_MAX_LEN, "/topic/render/%s", obj_name);
 
     start_timer();
