@@ -1,7 +1,11 @@
 ## WARM-based tools to interact/support the ARENA
 
-* runtime -> WARM with modifications to support mqtt pubsub (based on WARM/samples/simple/, using our modified WAMR runtime)
-* bridge-tool -> Bridge MQTT/REST to the runtime (based on WARM/test-tools/host-tool)
+This repository includes:
+
+* WASM **runtime**: WARM with modifications to support MQTT pubsub (based on WARM/samples/simple/, using our [modified WAMR runtime](https://github.com/WiseLabCMU/wasm-micro-runtime))
+* A **bridge-tool** Bridge MQTT/REST to the runtime (based on WARM/test-tools/host-tool)
+* A WASM **file upload utility** Tool to upload WASM files so that the runtime can execute them
+* Several **WASM demo applications** 
 
 See a depiction of the relation between the runtime and the bridge [here](https://user-images.githubusercontent.com/3504501/64827014-b7f7fb80-d590-11e9-9fdb-f9fb3e683853.png).
 
