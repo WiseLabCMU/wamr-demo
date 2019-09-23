@@ -2,7 +2,7 @@
 
 This repository includes:
 
-* WASM [**runtime**](runtime/): WARM with modifications to support MQTT pubsub (based on WARM/samples/simple/, using our [modified WAMR runtime](https://github.com/WiseLabCMU/wasm-micro-runtime))
+* WASM [**runtime**](runtime/): [WARM](https://github.com/intel/wasm-micro-runtime) with modifications to support MQTT pubsub (based on WARM/samples/simple/, using our [modified WAMR runtime](https://github.com/WiseLabCMU/wasm-micro-runtime))
 * [**bridge-tool**/(bridge-tool): Bridge MQTT/REST to the runtime (based on WARM/test-tools/host-tool)
 * WASM [**file upload utility**](http_upload/): Tool to upload WASM files so that the runtime can execute them
 * [**Dockerfile**](docker/) for a container that executes the runtime, bridge and file upload utility
