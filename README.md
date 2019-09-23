@@ -57,9 +57,9 @@ curl -v http://<runtime-ip>:<port>/cwasm/v1/modules
 
 #### MQTT Interface
 
-The runtime uses a UUID as defined in the file ```config.ini```. When launching from the docker image, the [container start script](https://github.com/WiseLabCMU/wamr-demo/blob/master/docker/start-bridged-runtime.sh) assigns a new UUID to the runtime.
+The runtime uses a UUID as defined in the file ```config.ini``` (default is ```runtime1```). When launching from the docker image, the [container start script](https://github.com/WiseLabCMU/wamr-demo/blob/master/docker/start-bridged-runtime.sh) assigns a new UUID to the runtime.
 
-When the runtime starts, it sends ```start``` message to the MQTT topic ```<realm>/r/<UUID>```, where ```realm``` is also configured in ```config.ini```. It also sets a *last will* message on this topic, so that the MQTT server notifies that it detected the end of the connection to the runtime.
+When the runtime starts, it sends a ```start``` message to the MQTT topic ```<realm>/r/<UUID>```, where ```realm``` is also configured in ```config.ini```. It also sets a *last will* message on this topic, so that the MQTT server notifies that it detected the end of the connection to the runtime.
 
 You can also install/uninstall WASM modules.
 
