@@ -33,13 +33,12 @@ FROM ubuntu:18.04
 RUN apt-get update 
 RUN apt-get install -y build-essential cmake g++-multilib git lib32gcc-5-dev uuid uuid-dev python lbzip2 xz-utils vim mosquitto-clients sed
 
-WORKDIR /
-RUN git clone https://github.com/emscripten-core/emsdk.git
-WORKDIR /emsdk
-#RUN git reset --hard d33f7a2
-RUN ./emsdk install latest
-RUN ./emsdk activate latest
-ENV PATH=$PATH:/emsdk:/emsdk/fastcomp/emscripten:/emsdk/node/8.9.1_64bit/bin
+# WORKDIR /
+# RUN git clone https://github.com/emscripten-core/emsdk.git
+# WORKDIR /emsdk
+# RUN ./emsdk install releases-fastcomp-d46be49c2aab975333423122239892bd46f52bba-64bit # tested version
+# RUN ./emsdk activate releases-fastcomp-d46be49c2aab975333423122239892bd46f52bba-64bit # tested version
+# ENV PATH=$PATH:/emsdk:/emsdk/fastcomp/emscripten:/emsdk/node/8.9.1_64bit/bin
 
 # Copy repository from temporary image
 RUN mkdir /wamr-demo
