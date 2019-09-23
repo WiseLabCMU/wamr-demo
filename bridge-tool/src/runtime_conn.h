@@ -37,6 +37,12 @@ extern "C" {
 #define RESPONSE_OUTPUT_CONSOLE 0
 #define RESPONSE_OUTPUT_HTTP 1
 
+#define PENDING_NONE 0
+#define PENDING_INSTALL 1
+#define PENDING_UNINSTALL 2
+
+extern int g_inst_inst_req;
+
 typedef enum REPLY_PACKET_TYPE {
     REPLY_TYPE_EVENT = 0, REPLY_TYPE_RESPONSE = 1
 } REPLY_PACKET_TYPE;

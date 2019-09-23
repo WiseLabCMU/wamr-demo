@@ -14,12 +14,19 @@
 #define REQ_FILENAME_VAR "wasm_file"
 #define REQ_CMD_VAR "cmd"
 
-// commands received  (mqtt)
-#define FMTSTR_RT_CMD_RT_START_JSON "{ \"id\":\"%s\", \"cmd\": \"%s\" }"
-#define RTCMD_RT_START "rt-start"
-#define RTCMD_RT_STOP "rt-stop"
-#define FMTSTR_RT_CMD_MOD_INST_JSON "{ \"id\":\"%s\", \"cmd\": \"%s\" \"module-name\": \"%s\"}"
-#define RTCMD_MOD_INST "module-inst"
-#define RTCMD_MOD_UNINST "module-uninst"
+// events  (mqtt)
+#define FMTSTR_EVENT_RT_START_JSON "{ \"id\":\"%s\", \"label\": \"%s\", \"cmd\": \"%s\" }"
+#define EVENT_RT_START "rt-start"
+#define EVENT_RT_STOP "rt-stop"
+
+#define FMTSTR_EVENT_MOD_INST_JSON "{ \"id\":\"%s\", \"label\": \"%s\", \"parent\":\"%s\", \"cmd\": \"%s\", \"module-name\": \"%s\"}"
+#define EVENT_MOD_INST "module-inst"
+#define EVENT_MOD_UNINST "module-uninst"
+
+#define FMTSTR_EVENT_PUSBSUB_JSON { \"id\":\"%s\", \"label\": \"%s\", \"parent\":\"%s\", \"cmd\": \"%s\", \"topic\": \"%s\"}"
+#define EVENT_PUB_START "pub-start"
+#define EVENT_PUB_STOP "pub-stop"
+#define EVENT_SUB_START "sub-start"
+#define EVENT_SUB_STOP "sub-stop"
 
 #endif

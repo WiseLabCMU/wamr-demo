@@ -33,6 +33,9 @@
 #include "http.h"
 #include "runtime_conn.h"
 #include "config.h" 
+#include "module_list.h"
+#include "mqtt.h"
+#include "http_mqtt_req.h"
 
 #include "app_manager_export.h" /* for Module_WASM_App */
 #include "host_link.h" /* for REQUEST_PACKET */
@@ -46,7 +49,9 @@ static uint32_t g_timeout_ms = DEFAULT_TIMEOUT_MS;
 unsigned char leading[2] = { 0x12, 0x34 };
 
 extern unsigned char leading[2];
-int g_mid;
+
+int g_mid; // request message id, to check incoming responses (mids should match)
+int g_inst_inst_req=PENDING_NONE; // are we waiting for an install request
 
 bool tcp_init(const char *address, uint16_t port, int *fd)
 {
@@ -353,6 +358,51 @@ request_t *parse_event_from_imrtlink(imrt_link_message_t *message, request_t *re
     return request;
 }
 
+static int install_response_get_module_id_and_name(response_t *obj, int *mod_id, char *mod_name, int module_name_len)
+{
+    attr_container_t *payload = obj->payload;
+    int foramt = obj->fmt;
+    int payload_len = obj->payload_len;
+    char *data;
+    cJSON *req_json = NULL;
+
+    if (obj == NULL || mod_id == NULL) return -1;
+
+    if (foramt != FMT_ATTR_CONTAINER || payload == NULL || payload_len <= 0)
+        return -1;
+
+    data = attr_container_get_as_string(payload, "data");
+
+    req_json = cJSON_Parse(data);
+
+    if (req_json == NULL) {
+        printf("Error parsing response json!\n");
+        return -1;
+    }
+    cJSON *json_module_id = cJSON_GetObjectItemCaseSensitive(req_json, "id");
+    if (cJSON_IsString(json_module_id) && (json_module_id->valuestring != NULL)) {
+        *mod_id = atoi(json_module_id->valuestring);
+    } else {
+        cJSON_Delete(req_json);
+        return -1;
+    }
+
+    if (mod_name != NULL && module_name_len > 0) {
+        cJSON *json_module_name = cJSON_GetObjectItemCaseSensitive(req_json, "name");
+        if (cJSON_IsString(json_module_name) && (json_module_name->valuestring != NULL)) {
+            strncpy(mod_name, json_module_name->valuestring, module_name_len);
+            mod_name[module_name_len]='\0';
+        } else {
+            cJSON_Delete(req_json);
+            return -1;
+        }
+    }
+
+    cJSON_Delete(req_json);
+    return 0;
+}
+
+
 void output(const char *header, attr_container_t *payload, int foramt,
         int payload_len)
 {
@@ -454,6 +504,20 @@ int get_request_response(struct mg_connection *http_mg_conn)
                         return -1;
                     }
                     
+                    if (g_inst_inst_req == PENDING_INSTALL) {
+                        int mod_id;
+                        char mod_name[50];
+                        install_response_get_module_id_and_name(response, &mod_id, mod_name, sizeof(mod_name));
+                        module_list_add(mod_id, mod_name);
+                        mqtt_notify_module_event(EVENT_MOD_INST, mod_id, mod_name);
+                    } else if (g_inst_inst_req == PENDING_UNINSTALL) {
+                        int mod_id;
+                        char mod_name[50];
+                        install_response_get_module_id_and_name(response, &mod_id, mod_name, 0);
+                        module_list_del_by_id(mod_id);
+                        mqtt_notify_module_event(EVENT_MOD_UNINST, mod_id, mod_name);
+                    }
+
                     if (http_mg_conn != NULL)
                         http_output_runtime_response(http_mg_conn, response);
                     else output_response(response);

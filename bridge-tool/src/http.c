@@ -93,7 +93,7 @@ static int http_handle_module_uninstall(struct mg_connection *nc, struct http_me
                 return -1;
             }  
         } else if (mg_vcmp(hdr, "application/json") == 0) {
-            const cJSON *json_module_name = NULL;
+            cJSON *json_module_name = NULL;
             // make sure boy  is null-terminated
             char *http_body = malloc(hm->body.len+1);
             memcpy(http_body,hm->body.p, hm->body.len);
@@ -145,7 +145,7 @@ static int http_handle_module_install(struct mg_connection *nc, struct http_mess
         } else if (mg_vcmp(hdr, "application/json") == 0) {
             const cJSON *json_module_name = NULL;
             const cJSON *json_wasm_file = NULL;
-            // make sure boy  is null-terminated
+            // make sure boy is null-terminated
             char *http_body = malloc(hm->body.len+1);
             memcpy(http_body,hm->body.p, hm->body.len);
             http_body[hm->body.len]='\0';

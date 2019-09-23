@@ -27,5 +27,6 @@ int mqtt_init(struct mg_connection **mqtt_mg_conn);
 void mqtt_pool_requests();
 
 void mqtt_process_runtime_event(struct mg_connection *nc, request_t *event);
-
+void mqtt_notify_module_event(char *module_event, int mod_id, char *mod_name);
+void mqtt_notify_pubsub_event(char *pubsub_event, int mod_id, char *topic);
 #endif

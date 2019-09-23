@@ -18,6 +18,7 @@
 #include "runtime_conn.h"
 #include "runtime_request.h"
 #include "http_mqtt_req.h"
+#include "module_list.h"
 
 static struct mg_mgr g_mqtt_mgr;
 
@@ -27,6 +28,9 @@ static char s_rt_last_will_msg[200];
 static char s_rt_last_will_topic[200];  // last will topic is also the runtime topic, where commands are received
 
 static struct mg_str s_rt_topic;
+
+// needed for event notification :(
+static struct mg_connection *s_mqtt_mg_conn;
 
 /**
  * Init mqttc connection
@@ -38,7 +42,7 @@ int mqtt_init(struct mg_connection **mqtt_mg_conn) {
   char started_msg[200], topic_str[200];
 
   mg_mgr_init(&g_mqtt_mgr, NULL);
-  *mqtt_mg_conn =
+  *mqtt_mg_conn = s_mqtt_mg_conn =
       mg_connect(&g_mqtt_mgr, g_bt_config.mqtt_server_address, mqtt_ev_handler);
   if (*mqtt_mg_conn == NULL) {
     fprintf(stderr, "Error connecting to MQTT server: %s.\n",
@@ -46,11 +50,11 @@ int mqtt_init(struct mg_connection **mqtt_mg_conn) {
     return -1;
   }
 
-  while (mg_mgr_poll(&g_mqtt_mgr, 10) > 0); // establish the connection
+  while (mg_mgr_poll(&g_mqtt_mgr, 1000) > 0); // establish the connection
 
-  // init start message
-  snprintf(started_msg, sizeof(started_msg), FMTSTR_RT_CMD_RT_START_JSON,
-           g_bt_config.rt_uuid, RTCMD_RT_START);
+  // init start message 
+  snprintf(started_msg, sizeof(started_msg), FMTSTR_EVENT_RT_START_JSON,
+           g_bt_config.rt_uuid, g_bt_config.rt_uuid, EVENT_RT_START);
   snprintf(topic_str, sizeof(topic_str), "%s%s", g_bt_config.rt_topic_prefix,
            g_bt_config.rt_uuid);
 
@@ -58,7 +62,7 @@ int mqtt_init(struct mg_connection **mqtt_mg_conn) {
   mg_mqtt_publish(*mqtt_mg_conn, topic_str, 65, MG_MQTT_QOS(0), started_msg,
                   strlen(started_msg));
 
-  while (mg_mgr_poll(&g_mqtt_mgr, 10) > 0); // publish
+  while (mg_mgr_poll(&g_mqtt_mgr, 1000) > 0); // publish
 
   printf("Connected to MQTT server: %s.\n", g_bt_config.mqtt_server_address);
   return 0;
@@ -92,7 +96,7 @@ void handle_module_install(struct mg_connection *nc,
     snprintf(str_filepath, sizeof(str_filepath), "%s/%s",
              g_bt_config.rt_wasm_files_folder, json_wasm_file->valuestring);
   } else {
-    printf("Could not parse jason for 'wasm_file'.\n");
+    printf("Could not parse json for 'wasm_file'.\n");
     return;
   }
 
@@ -141,12 +145,12 @@ void handle_rt_topic_message(struct mg_connection *nc,
   json_cmd = cJSON_GetObjectItemCaseSensitive(req_json, REQ_CMD_VAR);
   if (cJSON_IsString(json_cmd) &&
       (json_cmd->valuestring != NULL)) {
-        if (strncmp(json_cmd->valuestring, RTCMD_MOD_INST, strlen(RTCMD_MOD_INST)) == 0 ) {
+        if (strncmp(json_cmd->valuestring, EVENT_MOD_INST, strlen(EVENT_MOD_INST)) == 0 ) {
             handle_module_install(nc, req_json);
             free(msg_payload);
             cJSON_Delete(req_json);
             return;
-        } if (strncmp(json_cmd->valuestring, RTCMD_MOD_UNINST, strlen(RTCMD_MOD_UNINST)) == 0 ) {
+        } if (strncmp(json_cmd->valuestring, EVENT_MOD_UNINST, strlen(EVENT_MOD_UNINST)) == 0 ) {
             handle_module_uninstall(nc, req_json);
             free(msg_payload);
             cJSON_Delete(req_json);
@@ -182,7 +186,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
 
     // init last will message
     snprintf(s_rt_last_will_msg, sizeof(s_rt_last_will_msg),
-             FMTSTR_RT_CMD_RT_START_JSON, g_bt_config.rt_uuid, RTCMD_RT_STOP);
+             FMTSTR_EVENT_RT_START_JSON, g_bt_config.rt_uuid, g_bt_config.rt_uuid, EVENT_RT_STOP);
     snprintf(s_rt_last_will_topic, sizeof(s_rt_last_will_topic), "%s%s",
              g_bt_config.rt_topic_prefix, g_bt_config.rt_uuid);
 
@@ -268,12 +272,14 @@ void mqtt_process_runtime_event(struct mg_connection *nc, request_t *event) {
     printf("Subscribing to MQTT topic '%s'\n", s_topic_expr.topic);
     mg_mqtt_subscribe(nc, &s_topic_expr, 1, 41);
     mqtt_pool_requests();
+    mqtt_notify_pubsub_event(EVENT_SUB_START, event->sender, event->url);
     return;
   }
   if (event->action == COAP_EVENT_UNSUB) {
     printf("Unsubscribing from MQTT topic '%s'\n", event->url);
     mg_mqtt_unsubscribe(nc, &event->url, 1, 41);
     mqtt_pool_requests();
+    mqtt_notify_pubsub_event(EVENT_SUB_STOP, event->sender, event->url);
     return;
   }
   if (event->action == COAP_EVENT_PUB) {
@@ -301,6 +307,10 @@ void mqtt_process_runtime_event(struct mg_connection *nc, request_t *event) {
       }
     }
 
+    if (topic_list_check_and_add(event->url, event->sender) == 1) {
+      mqtt_notify_pubsub_event(EVENT_PUB_START, event->sender, event->url);
+    }
+
     mg_mqtt_publish(nc, event->url, 65, MG_MQTT_QOS(0), msg_str,
                     strlen(msg_str));
     mqtt_pool_requests();
@@ -311,4 +321,34 @@ void mqtt_process_runtime_event(struct mg_connection *nc, request_t *event) {
 
     return;
   }
+}
+
+void mqtt_notify_module_event(char *module_event, int mod_id, char *mod_name) 
+{
+  char module_id[100], event_msg[200];
+
+  snprintf(module_id, sizeof(module_id), "%s.%s", g_bt_config.rt_uuid, mod_name);
+
+  snprintf(event_msg, sizeof(event_msg), FMTSTR_EVENT_MOD_INST_JSON, module_id, mod_name, 
+           g_bt_config.rt_uuid, module_event, mod_name);
+
+  mg_mqtt_publish(s_mqtt_mg_conn, s_rt_topic.p, 65, MG_MQTT_QOS(0), event_msg, strlen(event_msg));
+  mqtt_pool_requests();
+}
+
+void mqtt_notify_pubsub_event(char *pubsub_event, int mod_id, char *topic) 
+{
+  char pubsub_id[200], parent[200], event_msg[200];
+
+  char *mod_name = module_list_get_name_by_id(mod_id);
+  if (mod_name==NULL) return;
+
+  snprintf(parent, sizeof(parent), "%s.%s", g_bt_config.rt_uuid, mod_name);
+  snprintf(pubsub_id, sizeof(pubsub_id), "%s.%s", parent, topic);
+
+  snprintf(event_msg, sizeof(event_msg), FMTSTR_EVENT_MOD_INST_JSON, pubsub_id, topic, 
+          parent, pubsub_event, topic);
+
+  mg_mqtt_publish(s_mqtt_mg_conn, s_rt_topic.p, 65, MG_MQTT_QOS(0), event_msg, strlen(event_msg));
+  mqtt_pool_requests();
 }

@@ -29,6 +29,7 @@
 
 extern unsigned char leading[2];
 extern int g_mid;
+extern int g_install_req;
 
 #define url_remain_space (sizeof(url) - strlen(url))
 
@@ -83,6 +84,8 @@ int install(char *filename, char *app_file_buf, int app_size, char *name, char *
 
     ret = send_request(request, is_wasm_bytecode_app);
 
+    if (ret >=0) g_inst_inst_req = PENDING_INSTALL;
+
     free(app_file_buf);
 
     return ret;
@@ -93,6 +96,7 @@ int uninstall(char *name, char *module_type)
 {
     request_t request[1] = { 0 };
     char url[URL_MAX_LEN] = { 0 };
+    int ret;
 
     snprintf(url, sizeof(url) - 1, "/applet?name=%s", name);
 
@@ -105,7 +109,11 @@ int uninstall(char *name, char *module_type)
     NULL, 0);
     request->mid = g_mid = gen_random_id();
 
-    return send_request(request, false);
+    ret = send_request(request, false);
+
+    if (ret >=0) g_inst_inst_req = PENDING_UNINSTALL;
+
+    return ret;
 }
 
 int query(char *name)

@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
                         //output_event(event);
                     //}
                     mqtt_process_runtime_event(mqtt_mg_conn, event);
-                    printf("received event to: %s\n", event->url);
+                    printf("received event to: %s (mod=%u)\n", event->url, (unsigned int)event->sender);
                 } else {
                     printf("received  type:%d\n", reply_type);
                 }

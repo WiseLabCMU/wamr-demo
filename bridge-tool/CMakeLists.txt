@@ -38,6 +38,7 @@ set(EXTERNAL_SOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/../external)
 set (CJSON_DIR ${EXTERNAL_SOURCES_DIR}/cJSON)
 set (MG_DIR ${EXTERNAL_SOURCES_DIR}/mongoose)
 set (INIH_DIR ${EXTERNAL_SOURCES_DIR}/inih)
+set (QUEUE_DIR ${EXTERNAL_SOURCES_DIR}/queue)
 
 include (${WASM_DIR}/lib/native-interface/native_interface.cmake)
 include (${APP_MGR_DIR}/app-mgr-shared/app_mgr_shared.cmake)
@@ -67,6 +68,7 @@ include_directories(
     ${CJSON_DIR}
     ${MG_DIR}
     ${INIH_DIR}
+    ${QUEUE_DIR}
 )
 
 file (GLOB_RECURSE BRIDGE_TOOL_SRC src/*.c)
