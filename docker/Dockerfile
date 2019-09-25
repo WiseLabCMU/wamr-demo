@@ -1,6 +1,8 @@
 # STEP 1. Create a temporary image to securely clone the repo
 FROM ubuntu:18.04 as clone-repo-temp
 
+USER root
+
 RUN apt-get update
 
 # Installing Git..
@@ -23,6 +25,7 @@ RUN ssh-keyscan github.com >> /root/.ssh/known_hosts
 
 WORKDIR /
 RUN git clone --recursive git@github.com:WiseLabCMU/wamr-demo.git
+# make sure we get the lastest wasm-micro-runtime
 WORKDIR /wamr-demo/runtime/wasm-micro-runtime/ 
 RUN git checkout master && git pull
 
@@ -30,15 +33,17 @@ RUN git checkout master && git pull
 # This way, the repository key is not stored in the final image
 FROM ubuntu:18.04
 
-RUN apt-get update 
-RUN apt-get install -y build-essential cmake g++-multilib git lib32gcc-5-dev uuid uuid-dev python lbzip2 xz-utils vim mosquitto-clients sed
+USER root
 
-# WORKDIR /
-# RUN git clone https://github.com/emscripten-core/emsdk.git
-# WORKDIR /emsdk
-# RUN ./emsdk install releases-fastcomp-d46be49c2aab975333423122239892bd46f52bba-64bit # tested version
-# RUN ./emsdk activate releases-fastcomp-d46be49c2aab975333423122239892bd46f52bba-64bit # tested version
-# ENV PATH=$PATH:/emsdk:/emsdk/fastcomp/emscripten:/emsdk/node/8.9.1_64bit/bin
+RUN apt-get update 
+RUN apt-get install -y build-essential cmake g++-multilib git lib32gcc-5-dev python lbzip2 xz-utils vim mosquitto-clients sed
+
+WORKDIR /
+RUN git clone https://github.com/emscripten-core/emsdk.git
+WORKDIR /emsdk
+RUN ./emsdk install sdk-releases-fastcomp-98f49919f25e06fa557cbcb1321d4c10e60c87ca-64bit # tested version
+RUN ./emsdk activate sdk-releases-fastcomp-98f49919f25e06fa557cbcb1321d4c10e60c87ca-64bit 
+ENV PATH=$PATH:/emsdk:/emsdk/fastcomp/emscripten:/emsdk/node/8.9.1_64bit/bin
 
 # Copy repository from temporary image
 RUN mkdir /wamr-demo
@@ -49,8 +54,6 @@ ENV EMSDK=/emsdk
 ENV EM_CONFIG=/root/.emscripten
 ENV EMSDK_NODE=/emsdk/node/8.9.1_64bit/bin/node
 RUN chmod +x ./build.sh
-RUN ./build.sh
-#RUN ./build.sh all
-RUN mkdir /wamr-demo/out/wasm-apps
-
+RUN ./build.sh all
+RUN chmod +x /wamr-demo/docker/start-bridged-runtime.sh 
 CMD /wamr-demo/docker/start-bridged-runtime.sh 
