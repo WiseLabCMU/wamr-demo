@@ -40,16 +40,9 @@
 /**
  * Init http server
  * 
- * @param http_mg_conn the http connection
  * @return returns -1 on error, 0 on success
  */
 int http_init(struct mg_connection **http_mg_conn);
-
-/**
- * Poll http requests
- * 
- */
-void http_pool_requests();
 
 /**
  * Default http event handler
@@ -61,13 +54,11 @@ void http_pool_requests();
 void http_ev_handler(struct mg_connection *nc, int ev, void *ev_data);
 
 /**
- * Reads response from runtime
+ * Printf http response 
  * 
- * @param http_mg_conn the connection to rest client 
- * @param runtime_conn connection to runtime
- * @return returns -1 on error, >=0 status code
+ * @param ... format string and parameters to print
  */
-int http_get_request_response(struct mg_connection *http_mg_conn, int runtime_conn_fd);
+void http_printf(struct mg_connection *nc, const char *fmt, ...);
 
 /**
  * Output http response given a response object from the runtime
@@ -76,16 +67,5 @@ int http_get_request_response(struct mg_connection *http_mg_conn, int runtime_co
  * @param obj response object received from runtime
  */
 void http_output_runtime_response(struct mg_connection *nc, response_t *obj);
-
-/**
- * Output http response given a a payload from the runtime
- * 
- * @param nc the connection to rest client 
- * @param payload payload object received from runtime
- * @param payload payload object received from runtime
- * @param format format of the payload object (should be FMT_ATTR_CONTAINER)
- * @param payload_len size of the payload
- */
-void http_output_attr_container(struct mg_connection *nc, attr_container_t *payload, int format, int payload_len);
 
 #endif

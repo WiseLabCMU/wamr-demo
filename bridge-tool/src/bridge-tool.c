@@ -30,9 +30,12 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "coap_ext.h"
+#include "http_mqtt_req.h"
 #include "cJSON.h"
 #include "runtime_conn.h"
 #include "runtime_request.h"
+#include "module_list.h"
 #include "http.h"
 #include "mqtt.h"
 #include "config.h"
@@ -41,18 +44,16 @@
 
 int main(int argc, char *argv[])
 {
-    int ret;
-    imrt_link_recv_context_t recv_ctx = { 0 };
+    int ret, result, runtime_conn_fd, n, reply_type = -1, rconn=0;
+    int mid, op_type;
     char buffer[BUF_SIZE] = { 0 };
     fd_set readfds;
-    int result = 0;
     struct timeval tv;
-    int runtime_conn_fd;
-    struct mg_connection *http_mg_conn=NULL;
+    struct mg_connection *http_mg_conn=NULL;    
     struct mg_connection *mqtt_mg_conn=NULL;
-    int n, reply_type = -1, rconn=0;
     uint32_t last_check, total_elapsed_ms = 0;
-  
+    imrt_link_recv_context_t recv_ctx = { 0 };
+
     if (read_config() != 0) return -1;
 
     bh_get_elpased_ms(&last_check);
@@ -76,12 +77,20 @@ int main(int argc, char *argv[])
             printf("Error: too many reconnection attempts.\n");
             exit(-1);
         }
+
         if (runtime_conn_fd == -1) {
             rconn++;
-            if (runtime_conn_init() != 0) {
+            if (runtime_conn_init(&runtime_conn_fd) != 0) {
                 sleep(1);
                 continue;
             } else rconn = 0;
+        }
+
+        if (mqtt_mg_conn->sock == -1) {
+            if (mqtt_init(&mqtt_mg_conn) != 0 ) {
+                sleep(1);
+                continue;
+            }
         }
 
         tv.tv_sec = 1;
@@ -90,7 +99,6 @@ int main(int argc, char *argv[])
         // initialize the set of active sockets (readfds is changed at each select() call)
         FD_ZERO (&readfds);
         FD_SET (runtime_conn_fd, &readfds);
-        FD_SET (http_mg_conn->sock, &readfds);
         FD_SET (mqtt_mg_conn->sock, &readfds);
 
         result = select(FD_SETSIZE, &readfds, NULL, NULL, &tv);
@@ -102,9 +110,7 @@ int main(int argc, char *argv[])
             }
         } else if (result == 0) { /* select timeout */
         } else if (result > 0) {
-            if (FD_ISSET(http_mg_conn->sock, &readfds)) {
-                http_pool_requests(); // process http requests
-            } else if (FD_ISSET(mqtt_mg_conn->sock, &readfds)) {
+            if (FD_ISSET(mqtt_mg_conn->sock, &readfds)) {
                 mqtt_pool_requests(); // process mqtt requests
             } else if (FD_ISSET(runtime_conn_fd, &readfds)) {
                 n = read(runtime_conn_fd, buffer, BUF_SIZE);
@@ -118,11 +124,40 @@ int main(int argc, char *argv[])
 
                 if (reply_type == REPLY_TYPE_RESPONSE) {
                     response_t response[1] = { 0 };
-
+                    int mod_id;
+                    char mod_name[50];                    
                     parse_response_from_imrtlink(&recv_ctx.message, response);
 
                     ret = response->status;
-                    output_response(response);
+
+                    get_pending_request_info(&mid, &op_type);
+
+                    if (response->mid != mid) {
+                        //ignore invalid response 
+                        printf("Unexpected response!\n");
+                        output_response(response);
+                        http_printf(http_mg_conn, "%s", "HTTP/1.1 412 Precondition Failed\r\n\r\n");
+                        return -1;
+                    }
+
+                    if (ret == CREATED_2_01 || ret == DELETED_2_02 || ret == CONTENT_2_05) {
+                        if (op_type == INSTALL) {
+                            install_response_get_module_id_and_name(response, &mod_id, mod_name, sizeof(mod_name));
+                            module_list_add(mod_id, mod_name);
+                            mqtt_notify_module_event(EVENT_MOD_INST, mod_id, mod_name);
+                        } else if (op_type == UNINSTALL) {
+                            //http_output_runtime_response(response);
+
+                            install_response_get_module_id_and_name(response, &mod_id, mod_name, 0);
+                            module_list_del_by_id(mod_id);
+                            mqtt_notify_module_event(EVENT_MOD_UNINST, mod_id, mod_name);
+                        }
+                    }
+
+                    http_output_runtime_response(http_mg_conn, response);
+
+                    rt_conn_response_received();
+
                 } else if (reply_type == REPLY_TYPE_EVENT) {
                     request_t event[1] = { 0 };
 
@@ -132,17 +167,15 @@ int main(int argc, char *argv[])
                         //printf("op=%d\n", op.type);
                         //output_event(event);
                     //}
-                    mqtt_process_runtime_event(mqtt_mg_conn, event);
-                    printf("received event to: %s (mod=%u)\n", event->url, (unsigned int)event->sender);
+                    //mqtt_process_runtime_event(mqtt_mg_conn, event);
+                    mqtt_process_runtime_event(event);
                 } else {
                     printf("received  type:%d\n", reply_type);
                 }
+
             }
         }
     } /* end of while(1) */
-
-    if (recv_ctx.message.payload != NULL)
-        free(recv_ctx.message.payload);
 
     runtime_conn_close();
 

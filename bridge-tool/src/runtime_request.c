@@ -28,15 +28,13 @@
 #include "coap_ext.h"
 
 extern unsigned char leading[2];
-extern int g_mid;
-extern int g_install_req;
 
 #define url_remain_space (sizeof(url) - strlen(url))
 
 /*return:
  0: success
  others: fail*/
-int install(char *filename, char *app_file_buf, int app_size, char *name, char *module_type, int heap_size, int timers, int watchdog_interval)
+int rt_req_install(char *filename, char *app_file_buf, int app_size, char *name, char *module_type, int heap_size, int timers, int watchdog_interval)
 {
     request_t request[1] = { 0 };
     char url[URL_MAX_LEN] = { 0 };
@@ -74,7 +72,7 @@ int install(char *filename, char *app_file_buf, int app_size, char *name, char *
 
     printf ("Installing size=%d \n", app_size);
     init_request(request, url, COAP_PUT, FMT_APP_RAW_BINARY, app_file_buf, app_size);
-    request->mid = g_mid = gen_random_id();
+    request->mid = gen_random_id();
 
     if ((module_type == NULL || strcmp(module_type, "wasm") == 0)
             && get_package_type(app_file_buf, app_size) == Wasm_Module_Bytecode)
@@ -84,15 +82,14 @@ int install(char *filename, char *app_file_buf, int app_size, char *name, char *
 
     ret = send_request(request, is_wasm_bytecode_app);
 
-    if (ret >=0) g_inst_inst_req = PENDING_INSTALL;
+    if (ret >=0) rt_conn_request_sent(INSTALL, request->mid); // indicate a request was successfully sent; 
 
     free(app_file_buf);
 
     return ret;
 }
 
-
-int uninstall(char *name, char *module_type)
+int rt_req_uninstall(char *name, char *module_type)
 {
     request_t request[1] = { 0 };
     char url[URL_MAX_LEN] = { 0 };
@@ -107,16 +104,16 @@ int uninstall(char *name, char *module_type)
     init_request(request, url, COAP_DELETE,
     FMT_ATTR_CONTAINER,
     NULL, 0);
-    request->mid = g_mid = gen_random_id();
+    request->mid = gen_random_id();
 
     ret = send_request(request, false);
 
-    if (ret >=0) g_inst_inst_req = PENDING_UNINSTALL;
+    if (ret >=0) rt_conn_request_sent(UNINSTALL, request->mid); // indicate a request was successfully sent; 
 
     return ret;
 }
 
-int query(char *name)
+int rt_req_query(char *name)
 {
     request_t request[1] = { 0 };
     int ret = -1;
@@ -130,14 +127,16 @@ int query(char *name)
     init_request(request, url, COAP_GET,
     FMT_ATTR_CONTAINER,
     NULL, 0);
-    request->mid = g_mid = gen_random_id();
+    request->mid = gen_random_id();
 
     ret = send_request(request, false);
+
+    if (ret >=0) rt_conn_request_sent(QUERY, request->mid); // indicate a request was successfully sent; 
 
     return ret;
 }
 
-int request(char *url, int action, cJSON *json)
+int rt_req_request(char *url, int action, cJSON *json)
 {
     request_t request[1] = { 0 };
     attr_container_t *payload = NULL;
@@ -154,11 +153,12 @@ int request(char *url, int action, cJSON *json)
     FMT_ATTR_CONTAINER, payload, payload_len);
     request->mid = gen_random_id();
 
-    printf("Sending request\n");
     ret = send_request(request, false);
 
     if (payload != NULL)
         attr_container_destroy(payload);
+
+    if (ret >=0) rt_conn_request_sent(REQUEST, request->mid); // indicate a request was successfully sent; 
 
     fail: return ret;
 }
@@ -167,7 +167,7 @@ int request(char *url, int action, cJSON *json)
  TODO: currently only support 1 url.
  how to handle multiple responses and set process's exit code?
  */
-int subscribe(char *urls)
+int rt_req_subscribe(char *urls)
 {
     request_t request[1] = { 0 };
     int ret = -1;
@@ -179,13 +179,16 @@ int subscribe(char *urls)
     NULL, 0);
     request->mid = gen_random_id();
     ret = send_request(request, false);
+
+    if (ret >=0) rt_conn_request_sent(REGISTER, request->mid); // indicate a request was successfully sent; 
+
     return ret;
 }
 
 /*
  TODO: currently only support 1 url.
  */
-int unsubscribe(char *urls)
+int rt_req_unsubscribe(char *urls)
 {
     request_t request[1] = { 0 };
     int ret = -1;
@@ -196,6 +199,9 @@ int unsubscribe(char *urls)
     NULL, 0);
     request->mid = gen_random_id();
     ret = send_request(request, false);
+
+    if (ret >=0) rt_conn_request_sent(UNREGISTER, request->mid); // indicate a request was successfully sent; 
+
     return ret;
 }
 

@@ -17,6 +17,7 @@
 #include "shared_utils.h"
 #include "attr_container.h"
 #include "mongoose.h"
+#include "runtime_request.h"
 
 #ifndef RUNTIME_CONN_H_
 #define RUNTIME_CONN_H_
@@ -36,12 +37,6 @@ extern "C" {
 
 #define RESPONSE_OUTPUT_CONSOLE 0
 #define RESPONSE_OUTPUT_HTTP 1
-
-#define PENDING_NONE 0
-#define PENDING_INSTALL 1
-#define PENDING_UNINSTALL 2
-
-extern int g_inst_inst_req;
 
 typedef enum REPLY_PACKET_TYPE {
     REPLY_TYPE_EVENT = 0, REPLY_TYPE_RESPONSE = 1
@@ -184,12 +179,44 @@ void output_response(response_t *obj);
 void output(const char *header, attr_container_t *payload, int foramt,int payload_len);
 
 /**
- * Reads response from runtime. If connection to rest client is given, forwards the response to it
+ * Return the mid and and op_type of a pending (to which we have not received a response) request
  * 
- * @param http_mg_conn the connection to rest client; if !=NULL outputs to the connection; if =NULL outputs to console
- * @return returns -1 on error, -2 on timeout; >=0 status code
  */
-int get_request_response(struct mg_connection *http_mg_conn);
+void get_pending_request_info(int *mid, int*op_type);
+
+/**
+ * Called by runtime_request when a request is sent, indicating that we are waiting for 
+ * the respective response
+ * 
+ * @return returns 1 is a response is pending, 0 if not
+ */
+void rt_conn_request_sent(op_type request_type, int mid);
+
+/**
+ * Checks if a response from the runtime is pending; do not start requests if a response is pending
+ * NOTE: rt_conn_response_pending() only has **one** calling thread
+ * 
+ * @return returns 1 is a response is pending, 0 if not
+ */
+int rt_conn_response_pending();
+
+/**
+ * Waits for a response from the runtime 
+ * 
+ */
+void rt_conn_wait_pending_response();
+
+/**
+ * Indicate that we have no pending request
+ * 
+ */
+void rt_conn_response_received();
+
+/**
+ * @brief Get id and name from a runtime response obj
+ *
+ */
+int install_response_get_module_id_and_name(response_t *obj, int *mod_id, char *mod_name, int module_name_len);
 
 #ifdef __cplusplus
 } /* end of extern "C" */

@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 
+#include "coap_ext.h"
 #include "bridge_tool_utils.h"
 #include "shared_utils.h"
 #include "attr_container.h"
@@ -36,13 +37,14 @@
 #include "module_list.h"
 #include "mqtt.h"
 #include "http_mqtt_req.h"
+#include "runtime_request.h"
 
 #include "app_manager_export.h" /* for Module_WASM_App */
 #include "host_link.h" /* for REQUEST_PACKET */
 
 static int g_runtime_conn_fd; /* may be tcp or uart */
 
-static uint32_t g_timeout_ms = DEFAULT_TIMEOUT_MS;
+//static uint32_t g_timeout_ms = DEFAULT_TIMEOUT_MS;
 
 #define SA struct sockaddr
 
@@ -50,8 +52,12 @@ unsigned char leading[2] = { 0x12, 0x34 };
 
 extern unsigned char leading[2];
 
-int g_mid; // request message id, to check incoming responses (mids should match)
-int g_inst_inst_req=PENDING_NONE; // are we waiting for an install request
+static int g_mid; // request message id, to check incoming responses (mids should match)
+static op_type g_req_op_type=NONE; // are we waiting for an install request
+
+/* lock for request/response data access */
+static pthread_mutex_t mutex_request = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t cond_pending;
 
 bool tcp_init(const char *address, uint16_t port, int *fd)
 {
@@ -296,7 +302,7 @@ int runtime_conn_init(int *runtime_conn_fd)
         return 0;
     }
 
-    return -1;
+    return pthread_cond_init(&cond_pending, NULL);
 }
 
 void runtime_conn_close()
@@ -358,7 +364,7 @@ request_t *parse_event_from_imrtlink(imrt_link_message_t *message, request_t *re
     return request;
 }
 
-static int install_response_get_module_id_and_name(response_t *obj, int *mod_id, char *mod_name, int module_name_len)
+int install_response_get_module_id_and_name(response_t *obj, int *mod_id, char *mod_name, int module_name_len)
 {
     attr_container_t *payload = obj->payload;
     int foramt = obj->fmt;
@@ -438,98 +444,55 @@ void output_response(response_t *obj)
 }
 
 /**
- * Reads response from runtime. If connection to rest client is given, forwards the response to it
+ * Return the mid and and op_type of a pending (to which we have not received a response) request
  * 
- * @param http_mg_conn the connection to rest client; if !=NULL outputs to the connection; if =NULL outputs to console
- * @return returns -1 on error, -2 on timeout; >=0 status code
  */
-int get_request_response(struct mg_connection *http_mg_conn)
+void get_pending_request_info(int *mid, int*op_type)
 {
-    int result, n;
-    imrt_link_recv_context_t recv_ctx = { 0 };
-    uint32_t last_check, total_elpased_ms = 0;
-    fd_set readfds;
-    char buffer[BUF_SIZE] = { 0 };
-
-    bh_get_elpased_ms(&last_check);
-
-  struct timeval tv;
-  while (1) {
-        total_elpased_ms += bh_get_elpased_ms(&last_check);
-
-        if (total_elpased_ms >= g_timeout_ms) {
-            if (http_mg_conn != NULL)
-                mg_printf(http_mg_conn, "%s", "HTTP/1.1 504 Gateway Timeout\r\n\r\n");
-            return TIMEOUT_EXIT_CODE;
-        }
-
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
-        
-        // initialize the set of active sockets (readfds is changed at each select() call)
-        FD_ZERO (&readfds);
-        FD_SET (g_runtime_conn_fd, &readfds);
-
-        result = select(FD_SETSIZE, &readfds, NULL, NULL, &tv);
-
-        if (result < 0) {
-            if (errno != EINTR) {
-                if (http_mg_conn != NULL)
-                    mg_printf(http_mg_conn, "%s", "HTTP/1.1 500 Internal Server Error\r\n\r\n");
-                else printf("Internal Server Error\n");
-                return -1;
-            }
-        } else if (result == 0) { /* select timeout */
-        } else if (result > 0) {
-            if (FD_ISSET(g_runtime_conn_fd, &readfds)) {
-               int reply_type = -1; 
-                n = read(g_runtime_conn_fd, buffer, BUF_SIZE);
-                if (n <= 0) {
-                    if (http_mg_conn != NULL)
-                        mg_printf(http_mg_conn, "%s", "HTTP/1.1 500 Internal Server Error\r\n\r\n");
-                    else printf("Internal Server Error\n");
-                    return -1;
-                }
-
-                reply_type = process_rcvd_data((char *) buffer, n, &recv_ctx);
-
-                if (reply_type == REPLY_TYPE_RESPONSE) {
-                    response_t response[1] = { 0 };
-
-                    parse_response_from_imrtlink(&recv_ctx.message, response);
-
-                    if (response->mid != g_mid) {
-                        /* ignore invalid response */
-                        mg_printf(http_mg_conn, "%s", "HTTP/1.1 412 Precondition Failed\r\n\r\n");
-                        return -1;
-                    }
-                    
-                    if (g_inst_inst_req == PENDING_INSTALL) {
-                        int mod_id;
-                        char mod_name[50];
-                        install_response_get_module_id_and_name(response, &mod_id, mod_name, sizeof(mod_name));
-                        module_list_add(mod_id, mod_name);
-                        mqtt_notify_module_event(EVENT_MOD_INST, mod_id, mod_name);
-                    } else if (g_inst_inst_req == PENDING_UNINSTALL) {
-                        int mod_id;
-                        char mod_name[50];
-                        install_response_get_module_id_and_name(response, &mod_id, mod_name, 0);
-                        module_list_del_by_id(mod_id);
-                        mqtt_notify_module_event(EVENT_MOD_UNINST, mod_id, mod_name);
-                    }
-
-                    if (http_mg_conn != NULL)
-                        http_output_runtime_response(http_mg_conn, response);
-                    else output_response(response);
-                    return response->status;
-                } else {
-                    if (http_mg_conn != NULL)
-                        mg_printf(http_mg_conn, "%s", "HTTP/1.1 500 Internal Server Error\r\n\r\n"); // no response ?
-                    else printf("Internal Server Error\n");
-                    return -1;
-                }
-            }
-        }
-    } /* end of while(1) */
-    return -1;
+    *mid = g_mid;
+    *op_type = g_req_op_type;
 }
+
+/**
+ * Called by runtime_request when a request is sent, indicating that we are waiting for 
+ * the respective response
+ * 
+ */
+void rt_conn_request_sent(op_type request_type, int mid) {
+    
+    pthread_mutex_lock(&mutex_request);
+
+    g_mid = mid; 
+    g_req_op_type = request_type;
+
+    pthread_mutex_unlock(&mutex_request);
+}
+
+/**
+ * Indicate that we have no pending request
+ * 
+ */
+void rt_conn_response_received() {
+    // ready to receive another request
+    pthread_mutex_lock(&mutex_request);
+
+    g_req_op_type=NONE;
+    pthread_cond_signal(&cond_pending);
+
+    pthread_mutex_unlock(&mutex_request);
+}
+
+/**
+ * Waits for a response from the runtime 
+ * 
+ */
+void rt_conn_wait_pending_response() 
+{
+    pthread_mutex_lock(&mutex_request);
+ 
+    while (g_req_op_type!=NONE) 
+        pthread_cond_wait(&cond_pending, &mutex_request);
+
+    pthread_mutex_unlock(&mutex_request);
+}
+
