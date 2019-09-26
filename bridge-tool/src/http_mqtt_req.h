@@ -23,7 +23,7 @@
 #define EVENT_MOD_INST "module-inst"
 #define EVENT_MOD_UNINST "module-uninst"
 
-#define FMTSTR_EVENT_PUSBSUB_JSON { \"id\":\"%s\", \"label\": \"%s\", \"parent\":\"%s\", \"cmd\": \"%s\", \"topic\": \"%s\"}"
+#define FMTSTR_EVENT_PUSBSUB_JSON "{ \"id\":\"%s\", \"label\": \"%s\", \"parent\":\"%s\", \"cmd\": \"%s\", \"topic\": \"%s\"}"
 #define EVENT_PUB_START "pub-start"
 #define EVENT_PUB_STOP "pub-stop"
 #define EVENT_SUB_START "sub-start"
