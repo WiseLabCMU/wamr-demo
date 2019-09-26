@@ -28,7 +28,8 @@ void mqtt_evt_handler(request_t *request)
 
 void on_init()
 {
-    mqtt_subscribe("alert/overheat", mqtt_evt_handler);
+    // subscribe to topic 'topic/test'
+    mqtt_subscribe("topic/test", mqtt_evt_handler);
 }
 
 void on_destroy()

@@ -25,9 +25,8 @@ static struct mg_mgr g_mqtt_mgr;
 static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p);
 
 static char s_rt_last_will_msg[200];
-static char s_rt_last_will_topic[200];  // last will topic is also the runtime topic, where commands are received
-
-static struct mg_str s_rt_topic;
+static char s_rt_topic[200];  // runtime topic, to where events are sent
+static char s_rt_cmd_topic[200];  // runtime command topic, where commands are received
 
 // needed for event notification :(
 static struct mg_connection *s_mqtt_mg_conn;
@@ -187,14 +186,12 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
     // init last will message
     snprintf(s_rt_last_will_msg, sizeof(s_rt_last_will_msg),
              FMTSTR_EVENT_RT_START_JSON, g_bt_config.rt_uuid, g_bt_config.rt_uuid, EVENT_RT_STOP);
-    snprintf(s_rt_last_will_topic, sizeof(s_rt_last_will_topic), "%s%s",
+    snprintf(s_rt_topic, sizeof(s_rt_topic), "%s%s",
              g_bt_config.rt_topic_prefix, g_bt_config.rt_uuid);
-
-    s_rt_topic = mg_mk_str(s_rt_last_will_topic); // create mg_str to for compares as messages arrive
 
     opts.user_name = NULL;
     opts.password = NULL;
-    opts.will_topic = s_rt_last_will_topic;
+    opts.will_topic = s_rt_topic;
     opts.will_message = s_rt_last_will_msg;
 
     mg_set_protocol_mqtt(nc);
@@ -206,10 +203,14 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
       printf("Got mqtt connection error: %d\n", msg->connack_ret_code);
     }
 
-    // subscribe to mqtt runtime topic
-    struct mg_mqtt_topic_expression s_topic_expr = {NULL, 0};
-    s_topic_expr.topic = s_rt_last_will_topic;
-    mg_mqtt_subscribe(nc, &s_topic_expr, 1, 41);
+    snprintf(s_rt_cmd_topic, sizeof(s_rt_cmd_topic), "%s%s/cmd",
+             g_bt_config.rt_topic_prefix, g_bt_config.rt_uuid);
+
+    printf("Subscribing to %s\n", s_rt_cmd_topic);
+    // subscribe to mqtt runtime command topic
+    struct mg_mqtt_topic_expression topic_expr = {NULL, 0};
+    topic_expr.topic = s_rt_cmd_topic;
+    mg_mqtt_subscribe(nc, &topic_expr, 1, 41);
 
     break;
   case MG_EV_MQTT_PUBACK:
@@ -222,11 +223,14 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
     printf("Got incoming message; topic:'%.*s'; msg:'%.*s'\n", (int)msg->topic.len,
            msg->topic.p, (int)msg->payload.len, msg->payload.p);
 
-    // message to runtime topic
-    if (mg_str_starts_with(msg->topic, s_rt_topic) == 1) {
+    // message to runtime cmd topic
+    if (mg_vcmp(&msg->topic, s_rt_cmd_topic) == 0) {
       handle_rt_topic_message(nc, msg);
       return;
     }
+
+    // ignore messages to self...
+    if (mg_vcmp(&msg->topic, s_rt_topic) == 0) return;
 
     payload = malloc(msg->payload.len + 1);
     memcpy(payload, msg->payload.p, msg->payload.len);
@@ -262,15 +266,15 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
 }
 
 void mqtt_process_runtime_event(struct mg_connection *nc, request_t *event) {
-  struct mg_mqtt_topic_expression s_topic_expr = {NULL, 0};
+  struct mg_mqtt_topic_expression topic_expr = {NULL, 0};
   attr_container_t *payload = (attr_container_t *)event->payload;
   cJSON *json = NULL, *raw_str = NULL;
   char *msg_str = NULL;
 
   if (event->action == COAP_EVENT_SUB) {
-    s_topic_expr.topic = event->url;
-    printf("Subscribing to MQTT topic '%s'\n", s_topic_expr.topic);
-    mg_mqtt_subscribe(nc, &s_topic_expr, 1, 41);
+    topic_expr.topic = event->url;
+    printf("Subscribing to MQTT topic '%s'\n", topic_expr.topic);
+    mg_mqtt_subscribe(nc, &topic_expr, 1, 41);
     mqtt_pool_requests();
     mqtt_notify_pubsub_event(EVENT_SUB_START, event->sender, event->url);
     return;
@@ -332,7 +336,7 @@ void mqtt_notify_module_event(char *module_event, int mod_id, char *mod_name)
   snprintf(event_msg, sizeof(event_msg), FMTSTR_EVENT_MOD_INST_JSON, module_id, mod_name, 
            g_bt_config.rt_uuid, module_event, mod_name);
 
-  mg_mqtt_publish(s_mqtt_mg_conn, s_rt_topic.p, 65, MG_MQTT_QOS(0), event_msg, strlen(event_msg));
+  mg_mqtt_publish(s_mqtt_mg_conn, s_rt_topic, 65, MG_MQTT_QOS(0), event_msg, strlen(event_msg));
   mqtt_pool_requests();
 }
 
@@ -341,14 +345,17 @@ void mqtt_notify_pubsub_event(char *pubsub_event, int mod_id, char *topic)
   char pubsub_id[200], parent[200], event_msg[200];
 
   char *mod_name = module_list_get_name_by_id(mod_id);
-  if (mod_name==NULL) return;
+  if (mod_name==NULL) {
+    printf("Could not find mod_id= %d\n", mod_id);
+    return;
+  }
 
   snprintf(parent, sizeof(parent), "%s.%s", g_bt_config.rt_uuid, mod_name);
   snprintf(pubsub_id, sizeof(pubsub_id), "%s.%s", parent, topic);
 
-  snprintf(event_msg, sizeof(event_msg), FMTSTR_EVENT_MOD_INST_JSON, pubsub_id, topic, 
+  snprintf(event_msg, sizeof(event_msg), FMTSTR_EVENT_PUSBSUB_JSON, pubsub_id, topic, 
           parent, pubsub_event, topic);
 
-  mg_mqtt_publish(s_mqtt_mg_conn, s_rt_topic.p, 65, MG_MQTT_QOS(0), event_msg, strlen(event_msg));
+  mg_mqtt_publish(s_mqtt_mg_conn, s_rt_topic, 65, MG_MQTT_QOS(0), event_msg, strlen(event_msg));
   mqtt_pool_requests();
 }

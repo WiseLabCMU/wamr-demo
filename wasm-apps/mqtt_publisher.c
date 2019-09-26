@@ -16,8 +16,8 @@ void publish_alert()
     // to publish a *non-json formatted* string, insert the message inside an attribute "raw_str" (other attributes will be ignored)
     //attr_container_set_string(&msg, "raw_str", "test message!"); // 'overheat detected' will be published to the topic 
 
-    // publish to topic 'alert/test'
-    mqtt_publish("alert/test", FMT_ATTR_CONTAINER, msg,
+    // publish to topic 'topic/test'
+    mqtt_publish("topic/test", FMT_ATTR_CONTAINER, msg,
             attr_container_get_serialize_length(msg));
 
     attr_container_destroy(msg);

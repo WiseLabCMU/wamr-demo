@@ -104,6 +104,7 @@ char *module_list_get_name_by_id(int mod_id)
     struct module_descriptor *mod;
 
     SLIST_FOREACH(mod, &modules, next_mod) {
+        printf("mod id: %d==%d\n", mod->id, mod_id);
         if (mod->id==mod_id) return mod->name;
     }
 
