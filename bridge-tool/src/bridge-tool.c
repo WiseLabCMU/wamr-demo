@@ -136,8 +136,8 @@ int main(int argc, char *argv[])
                         //ignore invalid response 
                         printf("Unexpected response!\n");
                         output_response(response);
-                        http_printf(http_mg_conn, "%s", "HTTP/1.1 412 Precondition Failed\r\n\r\n");
-                        return -1;
+                        //http_printf(http_mg_conn, "%s", "HTTP/1.1 412 Precondition Failed\r\n\r\n");
+                        //return -1;
                     }
 
                     if (ret == CREATED_2_01 || ret == DELETED_2_02 || ret == CONTENT_2_05) {
@@ -146,8 +146,6 @@ int main(int argc, char *argv[])
                             module_list_add(mod_id, mod_name);
                             mqtt_notify_module_event(EVENT_MOD_INST, mod_id, mod_name);
                         } else if (op_type == UNINSTALL) {
-                            //http_output_runtime_response(response);
-
                             install_response_get_module_id_and_name(response, &mod_id, mod_name, 0);
                             module_list_del_by_id(mod_id);
                             mqtt_notify_module_event(EVENT_MOD_UNINST, mod_id, mod_name);
