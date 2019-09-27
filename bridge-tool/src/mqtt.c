@@ -116,7 +116,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *p) {
     printf("Message publishing acknowledged (msg_id: %d)\n", msg->message_id);
     break;
   case MG_EV_MQTT_SUBACK:
-    printf("Subscription acknowledged.\n");
+    //printf("Subscription acknowledged.\n");
     break;
   case MG_EV_MQTT_PUBLISH: {
     printf("Got incoming message to topic:'%.*s' \n", (int)msg->topic.len, msg->topic.p);

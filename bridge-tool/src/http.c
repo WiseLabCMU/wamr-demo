@@ -220,7 +220,7 @@ static void http_handle_modules(struct mg_connection *nc, struct http_message *h
     }
     rt_conn_wait_pending_response();
     if (last_response_str != NULL) {
-        printf("Sending response to http client: %s\n", last_response_str);
+        //printf("Sending response to http client: %s\n", last_response_str);
         http_printf_with_status(nc, last_response_status, CT_HEADER_JSON, "%s", last_response_str);
         free(last_response_str);
         last_response_str=NULL;

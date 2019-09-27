@@ -70,7 +70,7 @@ int rt_req_install(char *filename, char *app_file_buf, int app_size, char *name,
         return -1;
     }
 
-    printf ("Installing size=%d \n", app_size);
+    //printf ("Installing size=%d \n", app_size);
     init_request(request, url, COAP_PUT, FMT_APP_RAW_BINARY, app_file_buf, app_size);
     request->mid = gen_random_id();
 
