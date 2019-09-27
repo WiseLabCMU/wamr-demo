@@ -106,9 +106,9 @@ int rt_req_uninstall(char *name, char *module_type)
     NULL, 0);
     request->mid = gen_random_id();
 
-    ret = send_request(request, false);
+    rt_conn_request_sent(UNINSTALL, request->mid); // indicate a request
 
-    if (ret >=0) rt_conn_request_sent(UNINSTALL, request->mid); // indicate a request was successfully sent; 
+    ret = send_request(request, false);
 
     return ret;
 }
@@ -129,9 +129,9 @@ int rt_req_query(char *name)
     NULL, 0);
     request->mid = gen_random_id();
 
-    ret = send_request(request, false);
+    rt_conn_request_sent(QUERY, request->mid); // indicate a request 
 
-    if (ret >=0) rt_conn_request_sent(QUERY, request->mid); // indicate a request was successfully sent; 
+    ret = send_request(request, false);
 
     return ret;
 }
@@ -153,12 +153,12 @@ int rt_req_request(char *url, int action, cJSON *json)
     FMT_ATTR_CONTAINER, payload, payload_len);
     request->mid = gen_random_id();
 
+    rt_conn_request_sent(REQUEST, request->mid); // indicate a request 
+
     ret = send_request(request, false);
 
     if (payload != NULL)
         attr_container_destroy(payload);
-
-    if (ret >=0) rt_conn_request_sent(REQUEST, request->mid); // indicate a request was successfully sent; 
 
     fail: return ret;
 }
@@ -178,9 +178,10 @@ int rt_req_subscribe(char *urls)
     FMT_ATTR_CONTAINER,
     NULL, 0);
     request->mid = gen_random_id();
-    ret = send_request(request, false);
+    
+    rt_conn_request_sent(REGISTER, request->mid); // indicate a request 
 
-    if (ret >=0) rt_conn_request_sent(REGISTER, request->mid); // indicate a request was successfully sent; 
+    ret = send_request(request, false); 
 
     return ret;
 }
@@ -198,9 +199,11 @@ int rt_req_unsubscribe(char *urls)
     FMT_ATTR_CONTAINER,
     NULL, 0);
     request->mid = gen_random_id();
+
+    rt_conn_request_sent(UNREGISTER, request->mid); // indicate a request
+
     ret = send_request(request, false);
 
-    if (ret >=0) rt_conn_request_sent(UNREGISTER, request->mid); // indicate a request was successfully sent; 
 
     return ret;
 }

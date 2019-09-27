@@ -132,12 +132,14 @@ int main(int argc, char *argv[])
 
                     get_pending_request_info(&mid, &op_type);
 
+                    //printf("%d == %d; status=%d\n", response->mid, mid, ret);
+
                     if (response->mid != mid) {
                         //ignore invalid response 
                         printf("Unexpected response!\n");
                         output_response(response);
-                        //http_printf(http_mg_conn, "%s", "HTTP/1.1 412 Precondition Failed\r\n\r\n");
-                        //return -1;
+                        http_printf(http_mg_conn, "%s", "HTTP/1.1 412 Precondition Failed\r\n\r\n");
+                        return -1;
                     }
 
                     if (ret == CREATED_2_01 || ret == DELETED_2_02 || ret == CONTENT_2_05) {
