@@ -80,9 +80,9 @@ int rt_req_install(char *filename, char *app_file_buf, int app_size, char *name,
     else
         is_wasm_bytecode_app = false;
 
-    ret = send_request(request, is_wasm_bytecode_app);
+    rt_conn_request_sent(INSTALL, request->mid); // indicate a request
 
-    if (ret >=0) rt_conn_request_sent(INSTALL, request->mid); // indicate a request was successfully sent; 
+    ret = send_request(request, is_wasm_bytecode_app);
 
     free(app_file_buf);
 
