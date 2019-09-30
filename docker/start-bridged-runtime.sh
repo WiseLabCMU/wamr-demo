@@ -21,4 +21,4 @@ sed -i 's/uuid=/uuid='$RT_UUID' ; /g' config.ini
 ./http_upload &
 ./runtime -s &
 sleep 1
-./bridge-tool
+./bridge-tool > log.txt

@@ -56,4 +56,5 @@ ENV EMSDK_NODE=/emsdk/node/8.9.1_64bit/bin/node
 RUN chmod +x ./build.sh
 RUN ./build.sh all
 RUN chmod +x /wamr-demo/docker/start-bridged-runtime.sh 
+
 CMD /wamr-demo/docker/start-bridged-runtime.sh 

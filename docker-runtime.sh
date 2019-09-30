@@ -8,5 +8,4 @@ RUNTIME_UUID=${2:-$(cat /proc/sys/kernel/random/uuid)}
 RUNTIME_ADDR=${3:-spatial.andrew.cmu.edu}
 
 printf "Runtime port=%s; uuid=%s; addr=%s\n" $RUNTIME_PORT $RUNTIME_UUID $RUNTIME_ADDR
-docker stop wamr-demo-container
-docker run -d -p $RUNTIME_PORT:8000 -e RT_UUID=$RUNTIME_UUID -e ADDR=$RUNTIME_ADDR -e PORT=$RUNTIME_PORT --rm --name wamr-demo-container npereira/wamr-demo 
+docker run -d -it -v $PWD:/wamr -p $RUNTIME_PORT:8000 -e RT_UUID=$RUNTIME_UUID -e ADDR=$RUNTIME_ADDR -e PORT=$RUNTIME_PORT --name wamr-demo-container-$RUNTIME_PORT npereira/wamr-demo
