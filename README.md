@@ -94,16 +94,6 @@ When a module publishes for the first time, stops, subscribes or unsubscribes to
 { "id":"<pub/sub uuid>", "label": "<mqtt topic>", "parent":"<module uuid>", "cmd": "sub-stop", "topic": "<mqtt topic>"}"
 ```
 
-### Module Install/Uninstall with MQTT
-
-You can also install/uninstall WASM modules with MQTT.
-
-**Install** module named 'pub' from the wasm file named 'mqtt_publisher.wasm':
-```
-mosquitto_pub -t arena/r/<runtime uuid> -h oz.andrew.cmu.edu -m '{ "id":"runtime uuid", "cmd": "module-inst", "name": "pub", "wasm_file": "mqtt_publisher.wasm" }’
-```
-> The file indicated (*mqtt_publisher.wasm* in the example) **must** exist in the runtime local folder ```wasm-apps/``` (configurable in ```config.ini```). To upload a file, you can use the upload utility (see [bellow](https://github.com/WiseLabCMU/wamr-demo/blob/master/README.md#wasm-file-upload-utility)).
-
 ## WASM File Upload Utility
 
 To upload WASM files to the runtime, send them to the ```/upload``` endpoint of the *http upload utility* (port 8021 by default; also defined in ```config.ini```) :
