@@ -1,11 +1,11 @@
 var subs = [];
 var pubs = [];
 var selected_node;
+var topic = 'arena/r';
+var mqtt_client;
+var state_uri='http://spatial.andrew.cmu.edu:5000/net-state'
 
 document.addEventListener('DOMContentLoaded', function() {
-
-
-    loadElements();
 
     var cy = window.cy = cytoscape({
         container: document.getElementById('cy'),
@@ -129,22 +129,24 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function loadElements() {
-  const response = await fetch('http://localhost:5000/net-state', {method: 'GET', mode: 'cors'})
+  const response = await fetch(state_uri, {method: 'GET', mode: 'cors'})
   const myJson = await response.json();
   console.log(JSON.stringify(myJson)); 
+  //var obj = JSON.parse('
+  myJson.forEach(function(obj) {
+    processNode(obj.data);
+  });
 }
 
 async function postInstallRequest(url = '', data = {}) {
     // Default options are marked with *
     const response = await fetch(url, {
         method: 'POST', // *GET, POST, PUT, DELETE, etc.
-        mode: 'cors', // no-cors, *cors, same-origin
         cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-        credentials: 'omit', // include, same-origin, *omit
+        credentials: 'omit', // include, *same-origin, omit
         headers: {
             'Content-Type': 'application/json'
         },
-        redirect: 'follow', // manual, *follow, error
         referrer: 'no-referrer', // no-referrer, *client
         body: JSON.stringify(data) // body data type must match 'Content-Type' header
     });
@@ -161,6 +163,22 @@ function install(message) {
             wasm_file: module_file
         })
     }
+}
+
+function deleteRuntime(message) {
+    if (typeof selected_node !== 'undefined') {
+        mqtt_client.publish(topic+'/'+selected_node.id, '{"id": "'+selected_node.id+'", "cmd": "rt-stop"}', 1, false);
+    }
+}
+
+async function deleteState(message) {
+    const response = await fetch(state_uri, {
+        method: 'DELETE', // *GET, POST, PUT, DELETE, etc.
+        cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+        credentials: 'omit', // include, *same-origin, omit
+        referrer: 'no-referrer', // no-referrer, *client
+    });
+    return await response.json(); // parses JSON response into native JavaScript objects    
 }
 
 function runLayout(message) {
@@ -185,6 +203,8 @@ function startConnect() {
     // Initialize new Paho client connection
     client = new Paho.MQTT.Client(host, Number(port), clientID);
 
+    mqtt_client = client;
+
     // Set callback handlers
     client.onConnectionLost = onConnectionLost;
     client.onMessageArrived = onMessageArrived;
@@ -207,13 +227,14 @@ function reConnect() {
 
 // Called when the client connects
 function onConnect() {
-    topic = 'arena/r';
-
     // Print output for the user in the messages div
     document.getElementById('status-box').value += 'Subscribing to: ' + topic + '\n';
 
     // Subscribe to the requested topic
     client.subscribe(topic);
+
+    // load state after establishing connection to mqtt
+    loadElements();
 }
 
 // Called when the client loses its connection
@@ -226,52 +247,47 @@ function onConnectionLost(responseObject) {
     }
 }
 
-// Called when a message arrives
-function onMessageArrived(message) {
-    document.getElementById('status-box').value += 'Received: ' + message.payloadString + '\n';
+function processNode(nodeObj) {
     var conn_change = 0;
 
-    var obj = JSON.parse(message.payloadString);
+    if (nodeObj.cmd == 'module-inst' || nodeObj.cmd == 'pub-start' || nodeObj.cmd == 'sub-start' || nodeObj.cmd == 'rt-start') {
 
-    console.log(obj.cmd);
-    if (obj.cmd == 'module-inst' || obj.cmd == 'pub-start' || obj.cmd == 'sub-start' || obj.cmd == 'rt-start') {
-
-        if (obj.cmd == 'rt-start') obj.type = 'runtime';
-        if (obj.cmd == 'module-inst') obj.type = 'module';
-        if (obj.cmd == 'pub-start') obj.type = 'pub';
-        if (obj.cmd == 'sub-start') obj.type = 'sub';
+        if (nodeObj.cmd == 'rt-start') nodeObj.type = 'runtime';
+        if (nodeObj.cmd == 'module-inst') nodeObj.type = 'module';
+        if (nodeObj.cmd == 'pub-start') nodeObj.type = 'pub';
+        if (nodeObj.cmd == 'sub-start') nodeObj.type = 'sub';
         try {
             cy.add({
                 group: 'nodes',
-                data: obj
+                data: nodeObj
             });
         } catch (err) {
             console.log(err.message);
         }
 
-        if (obj.cmd == 'pub-start') {
-            pubs.push(obj);
+        if (nodeObj.cmd == 'pub-start') {
+            pubs.push(nodeObj);
             conn_change = 1;
-        } else if (obj.cmd == 'sub-start') {
-            subs.push(obj);
+        } else if (nodeObj.cmd == 'sub-start') {
+            subs.push(nodeObj);
             conn_change = 1;
         }
 
-        if (obj.cmd == 'rt-start') {
-            client.subscribe(topic + '/' + obj.id);
+        if (nodeObj.cmd == 'rt-start') {
+            client.subscribe(topic + '/' + nodeObj.id);
         }
 
     }
 
-    if (obj.cmd == 'module-uninst' || obj.cmd == 'pub-stop' || obj.cmd == 'sub-stop' || obj.cmd == 'rt-stop') {
-        var d = cy.getElementById(obj.id);
+    if (nodeObj.cmd == 'module-uninst' || nodeObj.cmd == 'pub-stop' || nodeObj.cmd == 'sub-stop' || nodeObj.cmd == 'rt-stop') {
+        var d = cy.getElementById(nodeObj.id);
         cy.remove(d);
 
-        if (obj.cmd == 'pub-stop') {
-            pubs = pubs.filter(x => x.id !== obj.id);
+        if (nodeObj.cmd == 'pub-stop') {
+            pubs = pubs.filter(x => x.id !== nodeObj.id);
             conn_change = 1;
-        } else if (obj.cmd == 'sub-stop') {
-            subs = subs.filter(x => x.id !== obj.id);
+        } else if (nodeObj.cmd == 'sub-stop') {
+            subs = subs.filter(x => x.id !== nodeObj.id);
             conn_change = 1;
         }
     }
@@ -296,6 +312,15 @@ function onMessageArrived(message) {
     }
 
     runLayout();
+
+}
+
+// Called when a message arrives
+function onMessageArrived(message) {
+    document.getElementById('status-box').value += 'Received: ' + message.payloadString + '\n';
+    
+    var obj = JSON.parse(message.payloadString);
+    processNode(obj);
 }
 
 // Called when the disconnection button is pressed
