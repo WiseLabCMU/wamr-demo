@@ -10,6 +10,8 @@ eventlet = "*"
 flask = "*"
 flask-mqtt = "*"
 flask-socketio = "*"
+flask-cors = "*"
+flask-bootstrap = "*"
 
 [requires]
 python_version = "3.5"

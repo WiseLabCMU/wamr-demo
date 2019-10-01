@@ -1,4 +1,4 @@
 #!/bin/bash
 
-docker build . -t npereira/netstate #--no-cache
+docker build . -t npereira/netstate --no-cache
 
