@@ -32,7 +32,8 @@
 			<div class="preamble">
 				<span class="label label-info">CONIX Vizualization Demo</span>
 				<p/>
-					<button onclick="runLayout()">Arrange Nodes</button>
+					<button class="button" onclick="runLayout()">Arrange Nodes</button><p/>
+					<button class="button" onclick="deleteState()">Clear State</button>
 			</div>
 				<!--<div id="runtime_div" style="display: none;">-->
 			<div id="runtime_div">
@@ -52,8 +53,10 @@
 					</td></tr><tr>
 					<td><p style="display:inline">Module Name:</p></td>
 					<td><input type="text" size=23 id="module_name" value="mod1"></td>
-					<tr><td></td><td align="right"><button onclick="install()">Install Module</button></td></tr>
+					<tr><td></td><td align="right"><button class="button" onclick="install()">Install Module</button></td></tr>
+					<!--<tr><td span=2><button onclick="deleteRuntime()">Delete Runtime</button></td></tr>-->
 				</table>
+
 			</div>
 			<div class="status">
 				<p style="display:inline">Server: </p>
