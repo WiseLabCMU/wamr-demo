@@ -7,7 +7,7 @@
 #include "stdlib-legacy.h" // gcvt()
 
 #define MSG_FORMAT_STR "%s,%s,%s,%s,0,0,0,0,1,1,1,#FFEEAA,on"
-#define STR_MAX_LEN 50
+#define STR_MAX_LEN 100
 
 char obj_name[STR_MAX_LEN];
 char topic[STR_MAX_LEN];
@@ -34,7 +34,7 @@ void timer1_update(user_timer_t timer)
         z -= (double)rand() / (double)RAND_MAX + 0.5; 
         i--;
     }
-    // convert floaf to string; (need due to buf in snprintf's %f)
+    // convert floaf to string; (need due to bug in snprintf's %f)
     gcvt(x, 5, str_x); 
     gcvt(y, 5, str_y); 
     gcvt(z, 5, str_z); 
