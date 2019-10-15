@@ -55,7 +55,7 @@ void on_init()
     srand(time(0));
     int i = rand();
     snprintf(obj_name, STR_MAX_LEN, "sphere_%d", 1000 + rand() % 1000); // large random id to avoid name collisions
-    snprintf(topic, STR_MAX_LEN, "/topic/render/%s", obj_name);
+    snprintf(topic, STR_MAX_LEN, "/topic/earth/%s", obj_name);
 
     start_timer();
 }
