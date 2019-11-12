@@ -25,24 +25,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }, {
             selector: 'node[type="runtime"]',
             style: {
+                "font-size": 6,
                 'shape': 'round-rectangle',
                 'background-color': 'LightGray'
             }
         }, {
             selector: 'node[type="module"]',
             style: {
+                "font-size": 4,
                 'shape': 'ellipse',
                 'background-color': 'LightBlue'
             }
         }, {
             selector: 'node[type="pub"]',
             style: {
+                "font-size": 3,
                 'shape': 'tag',
                 'background-color': 'Chocolate'
             }
         }, {
             selector: 'node[type="sub"]',
             style: {
+                "font-size": 3,
                 'shape': 'barrel',
                 'background-color': 'Coral'
             }
@@ -57,26 +61,13 @@ document.addEventListener('DOMContentLoaded', function() {
             css: {
                 'curve-style': 'bezier',
                 'target-arrow-shape': 'triangle'
+            },
+            style: {
+                "font-size": 3,
+                'label': 'data(label)' // maps to data.label
             }
         }],
-
-        /*
-        'elements':  {  
-        'nodes': [
-              { 'data': { 'id': 'R1', 'label': 'Runtime 1', 'cmd': 'start'}},
-              { 'data': { 'id': 'R2', 'label': 'Runtime 2' }},
-              { 'data': { 'id': 'M1#R1', 'label': 'Module 1', 'parent': 'R1' }},
-              { 'data': { 'id': 'M2#R2', 'label': 'Module 2', 'parent': 'R2'  }},
-              { 'data': { 'id': 'PubA#M1#R1', 'parent': 'M1#R1' , 'label': 'PubA' }},
-              { 'data': { 'id': 'SubA#M2#R2', 'parent': 'M2#R2' , 'label': 'SubA' }}
-            ],
-            'edges': [
-              { 'data': { 'id': 'l1', 'source': 'PubA#M1#R1', 'target': 'SubA#M2#R2' } }
-
-            ]
-        },
-
-
+/*
         'elements':  {  
         'nodes': [
               { 'data': { 'id': 'R1', 'label': 'Runtime 1', 'cmd': 'start'}},
@@ -108,10 +99,17 @@ document.addEventListener('DOMContentLoaded', function() {
         selected_node = cy.$id(obj.id()).data();
         console.log(selected_node);
         if (selected_node.type == 'runtime') {
+            console.log("runtime")
+            document.getElementById('module_div').style.display = 'none';
             document.getElementById('runtime_div').style.display = 'block';
             document.getElementById('runtime_name').innerHTML = 'Runtime: <b>' + selected_node.label + '</b>'
+        } else if (selected_node.type == 'module') {
+            document.getElementById('runtime_div').style.display = 'none';
+            document.getElementById('module_div').style.display = 'block';
+            document.getElementById('module_name').innerHTML = 'Module: <b>' + selected_node.label + '</b>'
         } else {
             document.getElementById('runtime_div').style.display = 'none';
+            document.getElementById('module_div').style.display = 'none';
         }
     });
 
@@ -128,20 +126,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
-async function loadElements() {
+/*
+dataArray example:
+[
+    {
+        "data": {
+            "id": "runtime1",
+            "label": "runtime1",
+            "cmd": "rt-start",
+            "address": "spatial.andrew.cmu.edu",
+            "port": "8001"
+        }
+    },
+    {
+        "data": {
+            "id": "runtime3",
+            "label": "runtime3",
+            "cmd": "rt-start",
+            "address": "spatial.andrew.cmu.edu",
+            "port": "8003"
+        }
+    },
+    ...
+]
+*/
+function loadNodesFromDataArray(dataArray) {
+    //console.log(JSON.stringify(dataArray)); 
+    dataArray.forEach(function(obj) {
+        console.log(JSON.stringify(obj)); 
+        loadNode(obj.data);
+      });
+  }
+  
+async function loadNodesFromStateService() {
   const response = await fetch(state_uri, {method: 'GET', mode: 'cors'})
   const myJson = await response.json();
-  console.log(JSON.stringify(myJson)); 
-  //var obj = JSON.parse('
-  myJson.forEach(function(obj) {
-    processNode(obj.data);
-  });
+  loadNodesFromDataArray(myJson);
 }
 
-async function postInstallRequest(url = '', data = {}) {
+async function sendRequest(mthd = 'POST', url = '', data = {}) {
     // Default options are marked with *
     const response = await fetch(url, {
-        method: 'POST', // *GET, POST, PUT, DELETE, etc.
+        method: mthd, // *GET, POST, PUT, DELETE, etc.
         cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
         credentials: 'omit', // include, *same-origin, omit
         headers: {
@@ -153,15 +179,36 @@ async function postInstallRequest(url = '', data = {}) {
     return await response.json(); // parses JSON response into native JavaScript objects
 }
 
-function install(message) {
+async function install(message) {
     if (typeof selected_node !== 'undefined') {
-        var module_file = document.getElementById('module_select').value;
+        secret = document.getElementById('token').value;
+        target_url='http://'+selected_node.address+':'+selected_node.port+'/cwasm/v1/modules';
+        
+        module_file = document.getElementById('module_select').value;
+        module_name = document.getElementById('inst_module_name').value;
+        
+        data = { name: module_name, wasm_file: module_file };
 
-        alert('Install: ' + module_file + '; Addr:' + selected_node.address + '; Port:' + selected_node.port);
-        postInstallRequest('http://' + selected_node.address + ':' + selected_node.port + '/cwasm/v1/modules', {
-            name: 'conn',
-            wasm_file: module_file
-        })
+        request = { "token": secret, "url": target_url, "data":data };
+        console.log(request);
+        resp = await sendRequest('POST', 'http://' + window.location.host + ':5001/proxy', request); // post request to proxy
+        console.log(resp);
+    }
+}
+
+async function uninstall(message) {
+    if (typeof selected_node !== 'undefined') {
+        secret = document.getElementById('token').value;
+        target_url='http://'+selected_node.address+':'+selected_node.port+'/cwasm/v1/modules';
+        
+        module_name = selected_node.id;
+        
+        data = { name: module_name };
+
+        request = { "token": secret, "url": target_url, "data":data };
+        console.log(request);
+        resp = await sendRequest('DELETE', 'http://' + window.location.host + ':5001/proxy', request); // post request to proxy
+        console.log(resp);
     }
 }
 
@@ -234,7 +281,7 @@ function onConnect() {
     client.subscribe(topic);
 
     // load state after establishing connection to mqtt
-    loadElements();
+    loadNodesFromStateService();
 }
 
 // Called when the client loses its connection
@@ -247,7 +294,7 @@ function onConnectionLost(responseObject) {
     }
 }
 
-function processNode(nodeObj) {
+function loadNode(nodeObj) {
     var conn_change = 0;
 
     if (nodeObj.cmd == 'module-inst' || nodeObj.cmd == 'pub-start' || nodeObj.cmd == 'sub-start' || nodeObj.cmd == 'rt-start') {
@@ -315,12 +362,35 @@ function processNode(nodeObj) {
 
 }
 
+function testMessage()
+{
+    // double quote everything
+    // add "type" property to indicate if is a sub or a pub
+    // id of edges should be: <sourceID>-<targetID>
+    // add "cmd" with sub-start/sub-stop, pub-start/pub-stop
+    testData = { "elements":  {
+        "nodes": [
+        { "data": { "id": "MQTT", "label": 'MQTT', "cmd": "pub-start", "type": "pub"}},
+        { "data": { "id": "mosqsub|38-Kevin-Laptop", "label": "mosqsub|38-Kevin-Laptop", "cmd": "sub-start", "type": "sub"}}
+        ],
+        "edges": [
+        { "data": { "id": "MQTT-mosqsub|38-Kevin-Laptop", "source": "MQTT", "target": "mosqsub|38-Kevin-Laptop", "label": "0.113000" }}
+        ]
+        }};
+
+        //loadNodesFromDataArray(testData.elements.nodes);
+        cy.add(testData.elements);
+        
+        //loadEdgesFromDataArray(testData.elements.nodes);
+
+}
+
 // Called when a message arrives
 function onMessageArrived(message) {
     document.getElementById('status-box').value += 'Received: ' + message.payloadString + '\n';
-    
+ 
     var obj = JSON.parse(message.payloadString);
-    processNode(obj);
+    loadNode(obj);
 }
 
 // Called when the disconnection button is pressed
