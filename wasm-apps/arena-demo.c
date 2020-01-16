@@ -6,8 +6,9 @@
 #include "mqtt_pubsub.h"
 #include "stdlib-legacy.h" // gcvt()
 
-#define MSG_FORMAT_STR "%s,%s,1,%s,0,0,0,0,0.2,0.2,0.2,#FFEEAA,on"
-#define STR_MAX_LEN 100
+#define MSG_FORMAT_STR "{\"object_id\" : \"%s\", \"action\": \"update\", \"type\": \"object\", \"data\": {\"position\": {\"x\": %s, \"y\": 2, \"%s\": -1}}}"
+#define MSG_BUF_MAX_LEN 500
+#define STR_MAX_LEN 50
 
 char obj_name[STR_MAX_LEN];
 char topic[STR_MAX_LEN];
@@ -17,9 +18,9 @@ float x=0, z=1;
 /* Timer callback */
 void timer1_update(user_timer_t timer)
 {
-    char str_x[20], str_y[20], str_z[20];
+    char str_x[20], str_z[20];
     attr_container_t *msg;
-    char str_msg[STR_MAX_LEN];    
+    char msg_buf[MSG_BUF_MAX_LEN];    
 
     // use an attribute container to send a json formatted message
     msg = attr_container_create("msg"); // "msg" is the attribute container tag; not forwarded to mqtt
@@ -27,13 +28,13 @@ void timer1_update(user_timer_t timer)
     x += (((double)rand() / (double)RAND_MAX) - 0.5) / 2.0;
     z += (((double)rand() / (double)RAND_MAX) - 0.5) / 2.0; 
 
-    // convert floaf to string; (need due to bug in snprintf's %f)
+    // convert floaf to string; 
     gcvt(x, 5, str_x); 
     gcvt(z, 5, str_z); 
-    snprintf(str_msg, STR_MAX_LEN, MSG_FORMAT_STR, obj_name, str_x, str_z);
+    snprintf(msg_buf, MSG_BUF_MAX_LEN, MSG_FORMAT_STR, obj_name, str_x, str_z);
 
     // publish message
-    attr_container_set_string(&msg, "raw_str", str_msg);     
+    attr_container_set_string(&msg, "raw_str", msg_buf);     
 
     mqtt_publish(topic, FMT_ATTR_CONTAINER, msg,
             attr_container_get_serialize_length(msg));
@@ -52,10 +53,30 @@ void start_timer()
 
 void on_init()
 {
+    char str_x[20], str_z[20];
+    attr_container_t *msg;
+    char msg_buf[MSG_BUF_MAX_LEN];    
+
     srand(time(0));
     int i = rand();
     snprintf(obj_name, STR_MAX_LEN, "sphere_%d", 1000 + rand() % 1000); // large random id to avoid name collisions
     snprintf(topic, STR_MAX_LEN, "/topic/render/%s", obj_name);
+
+    // use an attribute container to send a json formatted message
+    msg = attr_container_create("msg"); // "msg" is the attribute container tag; not forwarded to mqtt
+
+    // convert floaf to string; 
+    gcvt(x, 5, str_x); 
+    gcvt(z, 5, str_z); 
+    snprintf(msg_buf, MSG_BUF_MAX_LEN, "{\"object_id\" : \"%s\", \"action\": \"create\", \"type\": \"object\", \"data\": {\"object_type\": \"sphere\", \"position\": {\"x\": 1, \"y\": 1, \"z\": 1}, \"scale\": {\"x\": %s, \"y\": 1, \"z\": %s}, \"color\": \"#FF0000\"}}" , obj_name, str_x, str_z);
+
+    // publish message
+    attr_container_set_string(&msg, "raw_str", msg_buf);     
+
+    mqtt_publish(topic, FMT_ATTR_CONTAINER, msg,
+            attr_container_get_serialize_length(msg));
+
+    attr_container_destroy(msg);
 
     start_timer();
 }
