@@ -6,7 +6,7 @@
 #include "mqtt_pubsub.h"
 #include "stdlib-legacy.h" // gcvt()
 
-#define MSG_FORMAT_STR "{\"object_id\" : \"%s\", \"action\": \"update\", \"type\": \"object\", \"data\": {\"position\": {\"x\": %s, \"y\": 2, \"%s\": -1}}}"
+#define MSG_FORMAT_STR "{\"object_id\" : \"%s\", \"action\": \"update\", \"type\": \"object\", \"data\": {\"position\": {\"x\": \"%s\", \"y\": \"2\", \"z\": \"%s\"}}}"
 #define MSG_BUF_MAX_LEN 500
 #define STR_MAX_LEN 50
 
@@ -60,7 +60,7 @@ void on_init()
     srand(time(0));
     int i = rand();
     snprintf(obj_name, STR_MAX_LEN, "sphere_%d", 1000 + rand() % 1000); // large random id to avoid name collisions
-    snprintf(topic, STR_MAX_LEN, "/topic/render/%s", obj_name);
+    snprintf(topic, STR_MAX_LEN, "realm/s/render/%s", obj_name);
 
     // use an attribute container to send a json formatted message
     msg = attr_container_create("msg"); // "msg" is the attribute container tag; not forwarded to mqtt
@@ -68,7 +68,7 @@ void on_init()
     // convert floaf to string; 
     gcvt(x, 5, str_x); 
     gcvt(z, 5, str_z); 
-    snprintf(msg_buf, MSG_BUF_MAX_LEN, "{\"object_id\" : \"%s\", \"action\": \"create\", \"type\": \"object\", \"data\": {\"object_type\": \"sphere\", \"position\": {\"x\": 1, \"y\": 1, \"z\": 1}, \"scale\": {\"x\": %s, \"y\": 1, \"z\": %s}, \"color\": \"#FF0000\"}}" , obj_name, str_x, str_z);
+    snprintf(msg_buf, MSG_BUF_MAX_LEN, "{\"object_id\" : \"%s\", \"action\": \"create\", \"type\": \"object\", \"data\": {\"object_type\": \"sphere\", \"position\": {\"x\": \"1\", \"y\": \"1\", \"z\": \"1\"}, \"scale\": {\"x\": \"%s\", \"y\": \"1\", \"z\": \"%s\"}, \"color\": \"#FF0000\"}}" , obj_name, str_x, str_z);
 
     // publish message
     attr_container_set_string(&msg, "raw_str", msg_buf);     
