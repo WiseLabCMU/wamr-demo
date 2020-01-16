@@ -31,7 +31,8 @@ void timer1_update(user_timer_t timer)
     // convert floaf to string; 
     gcvt(x, 5, str_x); 
     gcvt(z, 5, str_z); 
-    snprintf(msg_buf, MSG_BUF_MAX_LEN, MSG_FORMAT_STR, obj_name, str_x, str_z);
+    snprintf(msg_buf, MSG_BUF_MAX_LEN, "{\"object_id\" : \"%s\", \"action\": \"create\", \"type\": \"object\", \"data\": {\"object_type\": \"sphere\", \"position\": {\"x\": \"%s\", \"y\": \"1\", \"z\": \"%s\"}, \"color\": \"#FF0000\"}}" , obj_name, str_x, str_z);
+    //snprintf(msg_buf, MSG_BUF_MAX_LEN, MSG_FORMAT_STR, obj_name, str_x, str_z);
 
     // publish message
     attr_container_set_string(&msg, "raw_str", msg_buf);     
